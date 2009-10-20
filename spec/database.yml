@@ -1,0 +1,4 @@
+sqlite3:
+  adapter: sqlite3
+  database: userstamp_plugin_test.sqlite3
+  timeout: 5000
