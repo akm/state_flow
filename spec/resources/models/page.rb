@@ -7,12 +7,13 @@ class Page < ActiveRecord::Base
     entry '03', :approved       , '承認済'
     entry '04', :waiting_publish, '公開待ち'
     entry '05', :publishing     , '公開処理中'
-    entry '06', :published      , '公開済'
-    entry '07', :publish_failure, '公開失敗'
-    entry '08', :waiting_closing, '終了待ち'
-    entry '09', :closing        , '終了処理中'
-    entry '10', :closed         , '終了済'
-    entry '11', :closing_failure, '終了失敗'
+    entry '06', :publishing_done, '公開済'
+    entry '07', :published      , '公開済'
+    entry '08', :publish_failure, '公開失敗'
+    entry '09', :waiting_closing, '終了待ち'
+    entry '10', :closing        , '終了処理中'
+    entry '11', :closed         , '終了済'
+    entry '12', :closing_failure, '終了失敗'
   end
 
   state_flow(:status) do
@@ -26,9 +27,10 @@ class Page < ActiveRecord::Base
     
     with_options(:failure => :publish_failure) do |publishing|
       publishing.state :waiting_publish => :publishing, :lock => true
-      # publishing.state :publishing => {action(:start_publish) => :published}
+      # publishing.state :publishing => {action(:start_publish) => :publishing_done}
       publishing.state :publishing => action(:start_publish)
       publishing.state :publish_failure
+      publishing.state :publishing_done => :published, :if => :accessable?
     end
 
     state :published => {event(:close) => :waiting_closing}
@@ -37,9 +39,10 @@ class Page < ActiveRecord::Base
       closing.state :waiting_closing => :closing, :lock => true
       closing.state :closing => {action(:start_closing) => :closing}
       closing.state :closing_failure
+      closing.state :closing_done => :closed, :unless => :accessable?
     end
 
-    closing.state :closed
+    state :closed
   end
 
   def make_ediable
@@ -50,5 +53,9 @@ class Page < ActiveRecord::Base
 
   def start_closing
   end
+
+  def accessable?
+  end
+
   
 end

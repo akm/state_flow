@@ -1,4 +1,4 @@
-equire 'rubygems'
+require 'rubygems'
 gem 'rspec', '>= 1.1.4'
 require 'rake'
 require 'rake/rdoctask'

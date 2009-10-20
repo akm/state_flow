@@ -17,13 +17,10 @@ unless defined?(RAILS_ENV)
   # require 'action_view'
   require 'initializer'
  
-  require 'selectable_attr'
-  require 'selectable_attr_rails'
-  
   require 'yaml'
   config = YAML.load(IO.read(File.join(File.dirname(__FILE__), 'database.yml')))
   ActiveRecord::Base.logger = Logger.new(File.join(File.dirname(__FILE__), 'debug.log'))
-  ActionController::Base.logger = ActiveRecord::Base.logger
+  # ActionController::Base.logger = ActiveRecord::Base.logger
   ActiveRecord::Base.establish_connection(config[ENV['DB'] || 'sqlite3'])
   
   load(File.join(File.dirname(__FILE__), 'schema.rb'))
@@ -33,13 +30,23 @@ unless defined?(RAILS_ENV)
   #   map.connect ':controller/:action/:id'
   # end
  
+
+  gem 'selectable_attr'      , ">=0.3.7"
+  gem 'selectable_attr_rails', ">=0.3.7"
+  require 'selectable_attr'
+  require 'selectable_attr_i18n'
+  require 'selectable_attr_rails'
+  SelectableAttrRails.add_features_to_active_record
+  
+
   # %w(resources/models resources/controllers).each do |path|
-  #   $LOAD_PATH.unshift File.join(File.dirname(__FILE__), path)
-  #   ActiveSupport::Dependencies.load_paths << File.join(File.dirname(__FILE__), path)
-  # end
+  %w(resources/models).each do |path|
+    $LOAD_PATH.unshift File.join(File.dirname(__FILE__), path)
+    ActiveSupport::Dependencies.load_paths << File.join(File.dirname(__FILE__), path)
+  end
  
   require 'spec/autorun'
-  require 'spec/rails'
+  # require 'spec/rails'
  
   $LOAD_PATH << File.join(File.dirname(__FILE__), '..', 'lib')
   require File.join(File.dirname(__FILE__), '..', 'init')
