@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 class Page < ActiveRecord::Base
+  validates_presence_of :name
+
   selectable_attr :status_cd do
     entry '00', :created        , '生成済'
     entry '01', :editable       , '編集可'
@@ -16,8 +18,8 @@ class Page < ActiveRecord::Base
     entry '12', :closing_failure, '終了失敗'
   end
 
-  state_flow(:status) do
-    state :created => {action(:make_ediable) => :editable, :lock => true}
+  state_flow(:status_cd) do
+    state :created => {action(:make_editable) => :editable, :lock => true}
     state :editable  => {event(:apply) => :approving}
     state :approving => {
       event(:approve) => :approved,
@@ -45,7 +47,7 @@ class Page < ActiveRecord::Base
     state :closed
   end
 
-  def make_ediable
+  def make_editable
   end
 
   def start_publish

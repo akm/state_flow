@@ -11,13 +11,24 @@ module StateFlow
 
       def state_flow(selectable_attr, options = nil, &block)
         options = {
-          :attr_key_name => "#{selectable_attr}_key".to_sym
+          :attr_key_name => "#{self.enum_base_name(selectable_attr)}_key".to_sym
         }.update(options || {})
         flow = Base.new(self, selectable_attr, options[:attr_key_name])
         flow.instance_eval(&block)
+        flow.setup_events
         @state_flows ||= []
         @state_flows << flow
         flow
+      end
+
+      def process_state(selectable_attr, *keys)
+        state_flow = state_flow_for(selectable_attr)
+        raise ArgumentError, "state_flow not found: #{selectable_attr.inspect}" unless state_flow
+        keys.each do |key|
+          entry = state_flow[key]
+          raise ArgumentError, "entry not found: #{key.inspect}" unless entry
+          entry.process
+        end
       end
     end
     
@@ -27,6 +38,11 @@ module StateFlow
       @klass, @attr_name, @attr_key_name = klass, attr_name, attr_key_name
       @status_keys = klass.send(@attr_key_name.to_s.pluralize).map{|s| s.to_sym}
       @entries = []
+    end
+
+    def state_cd_by_key(key)
+      @state_cd_by_key_method_name ||= "#{klass.enum_base_name(attr_name)}_id_by_key"
+      klass.send(@state_cd_by_key_method_name, key)
     end
     
     def entry_for(key)
@@ -42,7 +58,7 @@ module StateFlow
 
     def new_entry(key)
       @entry_hash = nil
-      result = Entry.new(key)
+      result = Entry.new(self, key)
       entries << result
       result
     end
@@ -77,6 +93,66 @@ module StateFlow
       arg.each do |key, value|
         entry = new_entry(key)
         build_entry(entry, value, base_options)
+      end
+    end
+
+    def setup_events
+      event_defs = {}
+      entries.each do |entry|
+        origin_key = entry.key
+        entry.events.each do |event|
+          event_trans = event_defs[event.name] ||= {}
+          event_trans[origin_key] = [event.success_key, event.failure_key]
+        end
+      end
+      event_defs.each do |event_name, trans|
+        method_def = <<-"EOS"
+          def #{event_name}
+            @state_flow ||= self.class.state_flow_for(:#{attr_name})
+            @#{event_name}_transitions ||= #{trans.inspect}
+            @state_flow.process_with_log(self, 
+              *@#{event_name}_transitions[#{attr_key_name}])
+          end
+        EOS
+        if klass.instance_methods.include?(event_name)
+          klass.logger.warn("state_flow plugin was going to define #{event_name} but didn't do it because #{event_name} does exist.")
+        else
+          klass.module_eval(method_def, __FILE__, __LINE__)
+        end
+      end
+    end
+
+    def process_with_log(record, success_key, failure_key)
+      origin_state = record.send(attr_name)
+      origin_state_key = record.send(attr_key_name)
+      begin
+        yield(record) if block_given?
+        record.send("#{attr_key_name}=", success_key)
+        record.save!
+      rescue Exception
+        StateFlow::Log.error($!, 
+          :target => record,
+          :origin_state => origin_state,
+          :origin_state_key => origin_state_key.to_s,
+          :dest_state => self.state_cd_by_key(success_key),
+          :dest_state_key => success_key.to_s
+          )
+        if failure_key
+          begin
+            record.send("#{attr_key_name}=", failure_key)
+            record.save!
+          rescue Exception
+            StateFlow::Log.fatal($!,
+              :target => record,
+              :origin_state => origin_state,
+              :origin_state_key => origin_state_key.to_s,
+              :dest_state => flow.state_cd_by_key(success_key),
+              :dest_state_key => success_key.to_s
+              )
+            raise
+          end
+        end
+        raise
       end
     end
 
@@ -115,7 +191,7 @@ module StateFlow
     end
 
     def null_action_entry(entry, options, success_key = nil)
-      action = Action.new
+      action = Action.new(self)
       options = options.dup
       entry.action = setup_action(action, options, success_key)
       entry.options = options
@@ -146,11 +222,11 @@ module StateFlow
     public
 
     def action(name)
-      NamedAction.new(name)
+      NamedAction.new(self, name)
     end
 
     def event(name)
-      Event.new(name)
+      Event.new(self, name)
     end
 
     
@@ -174,8 +250,6 @@ module StateFlow
       descriptions.split(/$/).map{|s| s.sub(/^\s{8}/, '')}.join("\n")
     end
 
-
-
     def extract_common_options(hash)
       COMMON_OPTION_NAMES.inject({}) do |dest, name|
         value = hash.delete(name)
@@ -183,17 +257,34 @@ module StateFlow
         dest
       end
     end
+
     
     class Action
+      attr_reader :flow
       attr_accessor :success_key
       attr_accessor :failure_key
       attr_accessor :lock
+
+      def initialize(flow)
+        @flow = flow
+      end
+
+      def process(record, &block)
+        flow.process_with_log(record, success_key, failure_key, &block)
+      end
     end
     
     class NamedAction < Action
       attr_reader :name
-      def initialize(name)
+      def initialize(flow, name)
+        super(flow)
         @name = name.to_s.to_sym
+      end
+
+      def process(record)
+        super(record) do
+          record.send(name)
+        end
       end
     end
     
@@ -209,18 +300,20 @@ module StateFlow
     
     class Event
       include ActionExecutable
-      attr_reader :name
+      attr_reader :flow, :name
 
-      def initialize(name)
+      def initialize(flow, name)
+        @flow = flow
         @name = name.to_s.to_sym
       end
     end
 
     class Entry
       include ActionExecutable
-      attr_reader :key
+      attr_reader :flow, :key
 
-      def initialize(key)
+      def initialize(flow, key)
+        @flow = flow
         @key = key.to_s.to_sym
       end
       
@@ -232,9 +325,15 @@ module StateFlow
         events.detect{|event| event.name == name}
       end
 
+      def process
+        value = flow.state_cd_by_key(key)
+        if record = flow.klass.find(:first, :order => "id asc",
+            :lock => action ? action.lock : false,
+            :conditions => ["#{flow.attr_name} = ?", value])
+          action.process(record) if action
+        end
+      end
     end
-    
-    
     
   end
   

@@ -2,3 +2,11 @@ sqlite3:
   adapter: sqlite3
   database: state_flow_plugin_test.sqlite3
   timeout: 5000
+
+mysql:
+  adapter: mysql
+  encoding: utf8
+  username: root
+  password:
+  socket: /opt/local/var/run/mysql5/mysqld.sock
+  database: state_flow_test
