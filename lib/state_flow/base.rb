@@ -23,7 +23,7 @@ module StateFlow
 
       def process_state(selectable_attr, *keys, &block)
         options = {
-          :transactional => :each, # :all
+          :transactional => false, # :each, # :all
         }.update(keys.extract_options!)
         options[:transactional] = :each if options[:transactional] == true
         state_flow = state_flow_for(selectable_attr)
