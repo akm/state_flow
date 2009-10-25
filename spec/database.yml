@@ -5,8 +5,21 @@ sqlite3:
 
 mysql:
   adapter: mysql
+  database: state_flow_test
   encoding: utf8
   username: root
   password:
   socket: /opt/local/var/run/mysql5/mysqld.sock
+  # connect_timeout: 5000
+  read_timeout: 3000
+  write_timeout: 5000
+
+postgresql:
+  adapter: postgresql
   database: state_flow_test
+  encoding: unicode
+  host: localhost
+  username: postgres
+  password: 
+  allow_concurrency: true
+  pool: 30

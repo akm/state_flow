@@ -21,13 +21,29 @@ module StateFlow
         flow
       end
 
-      def process_state(selectable_attr, *keys)
+      def process_state(selectable_attr, *keys, &block)
+        options = {
+          :transactional => :each, # :all
+        }.update(keys.extract_options!)
+        options[:transactional] = :each if options[:transactional] == true
         state_flow = state_flow_for(selectable_attr)
         raise ArgumentError, "state_flow not found: #{selectable_attr.inspect}" unless state_flow
-        keys.each do |key|
-          entry = state_flow[key]
-          raise ArgumentError, "entry not found: #{key.inspect}" unless entry
-          entry.process
+        transaction_if_need(options[:transactional] == :all) do
+          keys.each do |key|
+            entry = state_flow[key]
+            raise ArgumentError, "entry not found: #{key.inspect}" unless entry
+            transaction_if_need(options[:transactional] == :each) do
+              entry.process(&block)
+            end
+          end
+        end
+      end
+      
+      def transaction_if_need(with_transaction, &block)
+        if with_transaction
+          self.transaction(&block)
+        else
+          yield
         end
       end
     end
@@ -267,10 +283,29 @@ module StateFlow
 
       def initialize(flow)
         @flow = flow
+        @record_key_on_thread = "#{self.class.name}_#{self.object_id}_record"
       end
 
-      def process(record, &block)
-        flow.process_with_log(record, success_key, failure_key, &block)
+      def record
+        Thread.current[@record_key_on_thread]
+      end
+
+      def record=(value)
+        Thread.current[@record_key_on_thread] = value
+      end
+
+      
+      def proceed
+        flow.process_with_log(self.record, success_key, failure_key)
+      end
+
+      def process(record)
+        self.record = record
+        begin
+          block_given? ? yield(self) : proceed
+        ensure
+          self.record = nil
+        end
       end
     end
     
@@ -281,10 +316,9 @@ module StateFlow
         @name = name.to_s.to_sym
       end
 
-      def process(record)
-        super(record) do
-          record.send(name)
-        end
+      def proceed
+        self.record.send(name)
+        super
       end
     end
     
@@ -325,12 +359,12 @@ module StateFlow
         events.detect{|event| event.name == name}
       end
 
-      def process
+      def process(&block)
         value = flow.state_cd_by_key(key)
         if record = flow.klass.find(:first, :order => "id asc",
             :lock => action ? action.lock : false,
             :conditions => ["#{flow.attr_name} = ?", value])
-          action.process(record) if action
+          action.process(record, &block) if action
         end
       end
     end

@@ -68,6 +68,7 @@ describe Page do
       log.descriptions.should =~ /^Validation failed: Name can't be blank/ 
       log.descriptions.should =~ /spec\/page_spec.rb/ 
     end
+
   end
 
   describe ":editable => event(:apply) => :approving" do

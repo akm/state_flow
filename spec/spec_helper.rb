@@ -5,7 +5,7 @@ ENV['RAILS_ENV'] ||= 'test'
 unless defined?(RAILS_ENV)
   RAILS_ENV = 'test' 
   RAILS_ROOT = File.dirname(__FILE__) unless defined?(RAILS_ROOT)
- 
+
   require 'rubygems'
   require 'spec'
  
@@ -19,9 +19,23 @@ unless defined?(RAILS_ENV)
  
   require 'yaml'
   config = YAML.load(IO.read(File.join(File.dirname(__FILE__), 'database.yml')))
+
+  class FormatterWithThread < Logger::Formatter
+    Format = "%s %s, [%s#%d] %5s -- %s: %s\n"
+    def call(severity, time, progname, msg)
+      Format % [(Thread.current[:name] || Thread.current.object_id).to_s, 
+        severity[0..0], format_datetime(time), $$, severity, progname,
+        msg2str(msg)]
+    end
+  end
+
   ActiveRecord::Base.logger = Logger.new(File.join(File.dirname(__FILE__), 'debug.log'))
-  # ActionController::Base.logger = ActiveRecord::Base.logger
-  ActiveRecord::Base.establish_connection(config[ENV['DB'] || 'sqlite3'])
+  ActiveRecord::Base.logger.formatter = FormatterWithThread.new
+    # ActionController::Base.logger = ActiveRecord::Base.logger
+
+  ActiveRecord::Base.establish_connection(
+    {:pool => 10}.update(config[ENV['DB'] || 'sqlite3'])
+    )
   
   load(File.join(File.dirname(__FILE__), 'schema.rb'))
  
@@ -29,7 +43,6 @@ unless defined?(RAILS_ENV)
   #   map.connect ':controller/:action/:id.:format'
   #   map.connect ':controller/:action/:id'
   # end
- 
 
   gem 'selectable_attr'      , ">=0.3.7"
   gem 'selectable_attr_rails', ">=0.3.7"
@@ -72,5 +85,7 @@ unless defined?(RAILS_ENV)
   end
  
   ActiveRecord::Base.configurations = true
+
+
  
 end
