@@ -79,8 +79,6 @@ module StateFlow
       result
     end
 
-    COMMON_OPTION_NAMES = [:lock, :if, :unless]
-
     def state(*args)
       raise_invalid_state_argument if args.length > 2
       if args.length == 2
@@ -145,8 +143,8 @@ module StateFlow
         yield(record) if block_given?
         record.send("#{attr_key_name}=", success_key)
         record.save!
-      rescue Exception
-        StateFlow::Log.error($!, 
+      rescue Exception => error
+        StateFlow::Log.error(error, 
           :target => record,
           :origin_state => origin_state,
           :origin_state_key => origin_state_key.to_s,
@@ -154,21 +152,27 @@ module StateFlow
           :dest_state_key => success_key.to_s
           )
         if failure_key
+          retry_count = 0
           begin
             record.send("#{attr_key_name}=", failure_key)
             record.save!
-          rescue Exception
-            StateFlow::Log.fatal($!,
+          rescue Exception => fatal_error
+            if retry_count == 0
+              retry_count += 1
+              record.attributes = record.class.find(record.id).attributes
+              retry
+            end
+            StateFlow::Log.fatal(fatal_error,
               :target => record,
               :origin_state => origin_state,
               :origin_state_key => origin_state_key.to_s,
-              :dest_state => flow.state_cd_by_key(success_key),
+              :dest_state => self.state_cd_by_key(success_key),
               :dest_state_key => success_key.to_s
               )
-            raise
+            raise fatal_error
           end
         end
-        raise
+        raise error
       end
     end
 
@@ -223,6 +227,7 @@ module StateFlow
 
     def setup_action(action, options, success_key = nil)
       action.success_key = success_key.to_sym if success_key
+      action.failure_key = options.delete(:failure)
       action.lock = options.delete(:lock)
       action
     end
@@ -265,6 +270,8 @@ module StateFlow
       EOS
       descriptions.split(/$/).map{|s| s.sub(/^\s{8}/, '')}.join("\n")
     end
+
+    COMMON_OPTION_NAMES = [:lock, :if, :unless, :failure]
 
     def extract_common_options(hash)
       COMMON_OPTION_NAMES.inject({}) do |dest, name|

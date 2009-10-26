@@ -211,16 +211,20 @@ describe Page do
     end
 
     it "validation error" do
+      Page.logger.debug("*" * 100)
       p1 = Page.create(:name => "top page", :status_cd => Page.status_id_by_key(:waiting_publish))
+      p1_backup = p1.clone
       p1.name = nil
       Page.should_receive(:find).with(:first, :lock => true,
         :conditions => ["status_cd = ?", Page.status_id_by_key(:waiting_publish)], :order => "id asc").and_return(p1)
+      Page.should_receive(:find).with(p1.id).and_return(p1_backup)
       lambda{
         Page.process_state(:status_cd, :waiting_publish)
       }.should raise_error(ActiveRecord::RecordInvalid)
       Page.count.should == 1
-      Page.count(:conditions => ["status_cd = ?", Page.status_id_by_key(:waiting_publish)]).should == 1
+      Page.count(:conditions => ["status_cd = ?", Page.status_id_by_key(:waiting_publish)]).should == 0
       Page.count(:conditions => ["status_cd = ?", Page.status_id_by_key(:publishing)]).should == 0
+      Page.count(:conditions => ["status_cd = ?", Page.status_id_by_key(:publish_failure)]).should == 1
       StateFlow::Log.count.should == 1
       log = StateFlow::Log.first
       log.target_type.should == 'Page'

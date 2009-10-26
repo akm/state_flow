@@ -69,6 +69,27 @@ describe StateFlow::Base do
         flow[:baz].action.lock.should == true
       end
       
+      it "state(:<state_name> => :<new_state_name>, :failure => <:failure_state>)" do
+        flow = @target.state_flow(:status) do
+          state :foo => :bar, :failure => :baz
+          state :bar => :baz, :lock => true
+          state({:baz => :foo}, {:lock => true})
+        end
+        flow[:foo].key.should == :foo
+        flow[:foo].events.should == []
+        flow[:foo].success_key.should == :bar
+        flow[:foo].failure_key.should == :baz
+        flow[:foo].options.should == {}
+        flow[:bar].key.should == :bar
+        flow[:bar].events.should == []
+        flow[:bar].success_key.should == :baz
+        flow[:bar].action.lock.should == true
+        flow[:baz].key.should == :baz
+        flow[:baz].events.should == []
+        flow[:baz].success_key.should == :foo
+        flow[:baz].action.lock.should == true
+      end
+      
       it "state(:<state_name> => action(:<method_name>))" do
         flow = @target.state_flow(:status) do
           state :foo => action(:hoge)
