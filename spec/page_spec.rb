@@ -60,10 +60,10 @@ describe Page do
       log = StateFlow::Log.first
       log.target_type.should == 'Page'
       log.target_id.should == p1.id
-      log.origin_state == '00'
-      log.origin_state_key == ':created'
-      log.dest_state == '01'
-      log.dest_state_key == ':editable'
+      log.origin_state.should == '00'
+      log.origin_state_key.should == 'created'
+      log.dest_state.should == '01'
+      log.dest_state_key.should == 'editable'
       log.level.should == 'error'
       log.descriptions.should =~ /^Validation failed: Name can't be blank/
       log.descriptions.should =~ /spec\/page_spec.rb/
@@ -93,10 +93,10 @@ describe Page do
       log = StateFlow::Log.first
       log.target_type.should == 'Page'
       log.target_id.should == p1.id
-      log.origin_state == '01'
-      log.origin_state_key == ':editable'
-      log.dest_state == '02'
-      log.dest_state_key == ':approving'
+      log.origin_state.should == '01'
+      log.origin_state_key.should == 'editable'
+      log.dest_state.should == '02'
+      log.dest_state_key.should == 'approving'
       log.level.should == 'error'
       log.descriptions.should =~ /^Validation failed: Name can't be blank/
       log.descriptions.should =~ /spec\/page_spec.rb/
@@ -126,10 +126,10 @@ describe Page do
       log = StateFlow::Log.first
       log.target_type.should == 'Page'
       log.target_id.should == p1.id
-      log.origin_state == '01'
-      log.origin_state_key == ':approving'
-      log.dest_state == '02'
-      log.dest_state_key == ':approved'
+      log.origin_state.should == '02'
+      log.origin_state_key.should == 'approving'
+      log.dest_state.should == '03'
+      log.dest_state_key.should == 'approved'
       log.level.should == 'error'
       log.descriptions.should =~ /^Validation failed: Name can't be blank/
       log.descriptions.should =~ /spec\/page_spec.rb/
@@ -158,10 +158,10 @@ describe Page do
       log = StateFlow::Log.first
       log.target_type.should == 'Page'
       log.target_id.should == p1.id
-      log.origin_state == '01'
-      log.origin_state_key == ':approving'
-      log.dest_state == '02'
-      log.dest_state_key == ':editable'
+      log.origin_state.should == '02'
+      log.origin_state_key.should == 'approving'
+      log.dest_state.should == '01'
+      log.dest_state_key.should == 'editable'
       log.level.should == 'error'
       log.descriptions.should =~ /^Validation failed: Name can't be blank/
       log.descriptions.should =~ /spec\/page_spec.rb/
@@ -190,10 +190,10 @@ describe Page do
       log = StateFlow::Log.first
       log.target_type.should == 'Page'
       log.target_id.should == p1.id
-      log.origin_state == '01'
-      log.origin_state_key == ':approved'
-      log.dest_state == '02'
-      log.dest_state_key == ':waiting_publish'
+      log.origin_state.should == '03'
+      log.origin_state_key.should == 'approved'
+      log.dest_state.should == '04'
+      log.dest_state_key.should == 'waiting_publish'
       log.level.should == 'error'
       log.descriptions.should =~ /^Validation failed: Name can't be blank/
       log.descriptions.should =~ /spec\/page_spec.rb/
@@ -218,7 +218,6 @@ describe Page do
       lambda{
         Page.process_state(:status_cd, :waiting_publish)
       }.should raise_error(ActiveRecord::RecordInvalid)
-
       Page.count.should == 1
       Page.count(:conditions => ["status_cd = ?", Page.status_id_by_key(:waiting_publish)]).should == 1
       Page.count(:conditions => ["status_cd = ?", Page.status_id_by_key(:publishing)]).should == 0
@@ -226,10 +225,10 @@ describe Page do
       log = StateFlow::Log.first
       log.target_type.should == 'Page'
       log.target_id.should == p1.id
-      log.origin_state == '00'
-      log.origin_state_key == ':waiting_publish'
-      log.dest_state == '01'
-      log.dest_state_key == ':publishing'
+      log.origin_state.should == '04'
+      log.origin_state_key.should == 'waiting_publish'
+      log.dest_state.should == '05'
+      log.dest_state_key.should == 'publishing'
       log.level.should == 'error'
       log.descriptions.should =~ /^Validation failed: Name can't be blank/
       log.descriptions.should =~ /spec\/page_spec.rb/
