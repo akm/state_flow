@@ -3,7 +3,7 @@ require 'state_flow'
 module StateFlow
 
   class Event
-    include ActionExecutable
+    include Action::Executable
     attr_reader :flow, :name
 
     def initialize(flow, name)

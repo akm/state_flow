@@ -51,16 +51,17 @@ module StateFlow
         result << " @unless=#{@unless.inspect}" if @unless
         result << '>'
     end
-  end
 
-  module ActionExecutable
-    attr_accessor :action
+    module Executable
+      attr_accessor :action
 
-    def options        ; @options ||= {} ; end
-    def options=(value); @options = value; end
+      def options        ; @options ||= {} ; end
+      def options=(value); @options = value; end
 
-    def success_key; action.success_key if action; end
-    def failure_key; action.failure_key if action; end
+      def success_key; action.success_key if action; end
+      def failure_key; action.failure_key if action; end
+    end
+
   end
   
 end
