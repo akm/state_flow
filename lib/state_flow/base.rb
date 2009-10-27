@@ -136,44 +136,6 @@ module StateFlow
       end
     end
 
-    def process_with_log(record, success_key, failure_key)
-      origin_state = record.send(attr_name)
-      origin_state_key = record.send(attr_key_name)
-      begin
-        yield(record) if block_given?
-        # success_keyが指定されない場合、その変更はアクションとして指定されたメソッドに依存します。
-        if success_key 
-          record.send("#{attr_key_name}=", success_key)
-          record.save!
-        end
-      rescue Exception => error
-        log_attrs = {
-          :target => record,
-          :origin_state => origin_state,
-          :origin_state_key => origin_state_key ? origin_state_key.to_s : nil,
-          :dest_state => self.state_cd_by_key(success_key),
-          :dest_state_key => success_key ? success_key.to_s : nil
-        }
-        StateFlow::Log.error(error, log_attrs)
-        if failure_key
-          retry_count = 0
-          begin
-            record.send("#{attr_key_name}=", failure_key)
-            record.save!
-          rescue Exception => fatal_error
-            if retry_count == 0
-              retry_count += 1
-              record.attributes = record.class.find(record.id).attributes
-              retry
-            end
-            StateFlow::Log.fatal(fatal_error, log_attrs)
-            raise fatal_error
-          end
-        end
-        raise error
-      end
-    end
-
     private
     
     def build_entry(entry, options_or_success_key, base_options)
@@ -240,27 +202,6 @@ module StateFlow
       end
     end
 
-    public
-
-    def action(name)
-      NamedAction.new(self, name)
-    end
-
-    def event(name)
-      Event.new(self, name)
-    end
-
-    def inspect
-      result = "<#{self.class.name} @attr_name=#{@attr_name.inspect} @attr_key_name=#{@attr_key_name.inspect}"
-      result << " @klass=\"#{@klass.name}\""
-      result << " @entries=#{@entries.inspect}"
-      result << '>'
-    end
-
-    
-
-    private
-
     COMMON_OPTION_NAMES = [:lock, :if, :unless, :failure]
 
     def extract_common_options(hash)
@@ -275,6 +216,67 @@ module StateFlow
       raise ArgumentError, state_argument_pattern
     end
 
+    public
+
+    def action(name)
+      NamedAction.new(self, name)
+    end
+
+    def event(name)
+      Event.new(self, name)
+    end
+
+
+
+    public
+
+    def process_with_log(record, success_key, failure_key)
+      origin_state = record.send(attr_name)
+      origin_state_key = record.send(attr_key_name)
+      begin
+        yield(record) if block_given?
+        # success_keyが指定されない場合、その変更はアクションとして指定されたメソッドに依存します。
+        if success_key 
+          record.send("#{attr_key_name}=", success_key)
+          record.save!
+        end
+      rescue Exception => error
+        log_attrs = {
+          :target => record,
+          :origin_state => origin_state,
+          :origin_state_key => origin_state_key ? origin_state_key.to_s : nil,
+          :dest_state => self.state_cd_by_key(success_key),
+          :dest_state_key => success_key ? success_key.to_s : nil
+        }
+        StateFlow::Log.error(error, log_attrs)
+        if failure_key
+          retry_count = 0
+          begin
+            record.send("#{attr_key_name}=", failure_key)
+            record.save!
+          rescue Exception => fatal_error
+            if retry_count == 0
+              retry_count += 1
+              record.attributes = record.class.find(record.id).attributes
+              retry
+            end
+            StateFlow::Log.fatal(fatal_error, log_attrs)
+            raise fatal_error
+          end
+        end
+        raise error
+      end
+    end
+
+    def inspect
+      result = "<#{self.class.name} @attr_name=#{@attr_name.inspect} @attr_key_name=#{@attr_key_name.inspect}"
+      result << " @klass=\"#{@klass.name}\""
+      result << " @entries=#{@entries.inspect}"
+      result << '>'
+    end
+
+    private
+    
     def state_argument_pattern
       descriptions = <<-"EOS"
         state arguments pattern:
