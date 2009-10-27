@@ -211,7 +211,6 @@ describe Page do
     end
 
     it "validation error" do
-      Page.logger.debug("*" * 100)
       p1 = Page.create(:name => "top page", :status_cd => Page.status_id_by_key(:waiting_publish))
       p1_backup = p1.clone
       p1.name = nil
@@ -239,4 +238,92 @@ describe Page do
     end
 
   end
+
+
+  describe ":waiting_publish => :publishing" do
+    it "valid" do
+      p1 = Page.create(:name => "top page", :status_cd => Page.status_id_by_key(:waiting_publish))
+      Page.process_state(:status_cd, :waiting_publish)
+      #
+      Page.count.should == 1
+      Page.count(:conditions => ["status_cd = ?", Page.status_id_by_key(:waiting_publish)]).should == 0
+      Page.count(:conditions => ["status_cd = ?", Page.status_id_by_key(:publishing)]).should == 1
+    end
+
+    it "validation error" do
+      p1 = Page.create(:name => "top page", :status_cd => Page.status_id_by_key(:waiting_publish))
+      p1_backup = p1.clone
+      p1.name = nil
+      Page.should_receive(:find).with(:first, :lock => true,
+        :conditions => ["status_cd = ?", Page.status_id_by_key(:waiting_publish)], :order => "id asc").and_return(p1)
+      # ステータス変更時のsave!で発生する例外による失敗によって対象となるレコードのキーを
+      # :failureで指定された:publish_failureに設定して保存するため、
+      # バリデーションエラーのないデータをid指定でfindするためここでモックを指定します。
+      Page.should_receive(:find).with(p1.id).and_return(p1_backup)
+      lambda{
+        Page.process_state(:status_cd, :waiting_publish)
+      }.should raise_error(ActiveRecord::RecordInvalid)
+      Page.count.should == 1
+      Page.count(:conditions => ["status_cd = ?", Page.status_id_by_key(:waiting_publish)]).should == 0
+      Page.count(:conditions => ["status_cd = ?", Page.status_id_by_key(:publishing)]).should == 0
+      Page.count(:conditions => ["status_cd = ?", Page.status_id_by_key(:publish_failure)]).should == 1
+      StateFlow::Log.count.should == 1
+      log = StateFlow::Log.first
+      log.target_type.should == 'Page'
+      log.target_id.should == p1.id
+      log.origin_state.should == '04'
+      log.origin_state_key.should == 'waiting_publish'
+      log.dest_state.should == '05'
+      log.dest_state_key.should == 'publishing'
+      log.level.should == 'error'
+      log.descriptions.should =~ /^Validation failed: Name can't be blank/
+      log.descriptions.should =~ /spec\/page_spec.rb/
+    end
+
+  end
+
+
+  describe ":publishing => action(:start_publish)" do
+    it "valid" do
+      p1 = Page.create(:name => "top page", :status_cd => Page.status_id_by_key(:publishing))
+      Page.process_state(:status_cd, :publishing)
+      # Page.process_stateによって:start_publishが実行されて、そのメソッド内部でステータスが変更されます。
+      Page.count.should == 1
+      Page.count(:conditions => ["status_cd = ?", Page.status_id_by_key(:publishing)]).should == 0
+      Page.count(:conditions => ["status_cd = ?", Page.status_id_by_key(:publishing_done)]).should == 1
+    end
+
+    it "validation error" do
+      Page.logger.debug("*" * 100)
+      p1 = Page.create(:name => "top page", :status_cd => Page.status_id_by_key(:publishing))
+      p1_backup = Page.find(p1.id)
+      p1.name = nil
+      p1.valid?.should == false
+      Page.should_receive(:find).with(:first,
+        :conditions => ["status_cd = ?", Page.status_id_by_key(:publishing)], :order => "id asc").and_return(p1)
+      Page.should_receive(:find).with(p1.id).and_return(p1_backup)
+      
+      lambda{
+        Page.process_state(:status_cd, :publishing)
+      }.should raise_error(ActiveRecord::RecordInvalid)
+      Page.count.should == 1
+      Page.count(:conditions => ["status_cd = ?", Page.status_id_by_key(:publishing)]).should == 0
+      Page.count(:conditions => ["status_cd = ?", Page.status_id_by_key(:publishing_done)]).should == 0
+      Page.count(:conditions => ["status_cd = ?", Page.status_id_by_key(:publish_failure)]).should == 1
+      StateFlow::Log.count.should == 1
+      log = StateFlow::Log.first
+      log.target_type.should == 'Page'
+      log.target_id.should == p1.id
+      log.origin_state.should == '05'
+      log.origin_state_key.should == 'publishing'
+      log.dest_state.should == nil # '06' # メソッド内で指定しているのでnil
+      log.dest_state_key.should == nil # 'publishing_done' # メソッド内で指定しているのでnil
+      log.level.should == 'error'
+      log.descriptions.should =~ /^Validation failed: Name can't be blank/
+      log.descriptions.should =~ /spec\/page_spec.rb/
+    end
+  end
+  
+
+  
 end

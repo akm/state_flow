@@ -147,13 +147,14 @@ module StateFlow
           record.save!
         end
       rescue Exception => error
-        StateFlow::Log.error(error, 
+        log_attrs = {
           :target => record,
           :origin_state => origin_state,
-          :origin_state_key => origin_state_key.to_s,
+          :origin_state_key => origin_state_key ? origin_state_key.to_s : nil,
           :dest_state => self.state_cd_by_key(success_key),
-          :dest_state_key => success_key.to_s
-          )
+          :dest_state_key => success_key ? success_key.to_s : nil
+        }
+        StateFlow::Log.error(error, log_attrs)
         if failure_key
           retry_count = 0
           begin
@@ -165,13 +166,7 @@ module StateFlow
               record.attributes = record.class.find(record.id).attributes
               retry
             end
-            StateFlow::Log.fatal(fatal_error,
-              :target => record,
-              :origin_state => origin_state,
-              :origin_state_key => origin_state_key.to_s,
-              :dest_state => self.state_cd_by_key(success_key),
-              :dest_state_key => success_key.to_s
-              )
+            StateFlow::Log.fatal(fatal_error, log_attrs)
             raise fatal_error
           end
         end
@@ -312,11 +307,6 @@ module StateFlow
         Thread.current[@record_key_on_thread] = value
       end
 
-      
-      def proceed
-        flow.process_with_log(self.record, success_key, failure_key)
-      end
-
       def process(record)
         self.record = record
         begin
@@ -326,6 +316,10 @@ module StateFlow
         end
       end
       
+      def proceed
+        flow.process_with_log(self.record, success_key, failure_key)
+      end
+
       def inspect
         result = "<#{self.class.name}"
         result << " @name=#{@name.inspect}" if @name
@@ -344,8 +338,9 @@ module StateFlow
       end
 
       def proceed
-        self.record.send(name)
-        super
+        flow.process_with_log(self.record, success_key, failure_key) do
+          self.record.send(name)
+        end
       end
     end
     
