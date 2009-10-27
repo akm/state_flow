@@ -14,8 +14,9 @@ class Page < ActiveRecord::Base
     entry '08', :publish_failure, '公開失敗'
     entry '09', :waiting_closing, '終了待ち'
     entry '10', :closing        , '終了処理中'
-    entry '11', :closed         , '終了済'
-    entry '12', :closing_failure, '終了失敗'
+    entry '11', :closing_done   , '終了処理完了'
+    entry '12', :closed         , '終了済'
+    entry '13', :closing_failure, '終了失敗'
   end
 
   state_flow(:status_cd) do
