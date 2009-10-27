@@ -290,7 +290,7 @@ module StateFlow
       EOS
       descriptions.split(/$/).map{|s| s.sub(/^\s{8}/, '')}.join("\n")
     end
-
+  end
 
     
     class Action
@@ -422,7 +422,5 @@ module StateFlow
         result << ">"
       end
     end
-    
-  end
   
 end

@@ -31,8 +31,8 @@ describe StateFlow::Base do
           @flow.inspect.should == '<StateFlow::Base @attr_name=:status @attr_key_name=:status_key' <<
             " @klass=#{@target.name.inspect}" <<
             ' @entries=[' <<
-            '<StateFlow::Base::Entry @key=:foo @action=<StateFlow::Base::Action>>, ' <<
-            '<StateFlow::Base::Entry @key=:bar @action=<StateFlow::Base::Action @lock=true>>' <<
+            '<StateFlow::Entry @key=:foo @action=<StateFlow::Action>>, ' <<
+            '<StateFlow::Entry @key=:bar @action=<StateFlow::Action @lock=true>>' <<
             ']>'
         end
         
@@ -62,8 +62,8 @@ describe StateFlow::Base do
           @flow.inspect.should == '<StateFlow::Base @attr_name=:status @attr_key_name=:status_key' <<
             " @klass=#{@target.name.inspect}" <<
             ' @entries=[' <<
-            '<StateFlow::Base::Entry @key=:foo @action=<StateFlow::Base::Action>>, ' <<
-            '<StateFlow::Base::Entry @key=:bar @action=<StateFlow::Base::Action @lock=true>>' <<
+            '<StateFlow::Entry @key=:foo @action=<StateFlow::Action>>, ' <<
+            '<StateFlow::Entry @key=:bar @action=<StateFlow::Action @lock=true>>' <<
             ']>'
         end
         
@@ -95,9 +95,9 @@ describe StateFlow::Base do
           @flow.inspect.should == '<StateFlow::Base @attr_name=:status @attr_key_name=:status_key' <<
             " @klass=#{@target.name.inspect}" <<
             ' @entries=[' <<
-            '<StateFlow::Base::Entry @key=:foo @action=<StateFlow::Base::Action @success_key=:bar>>, ' <<
-            "<StateFlow::Base::Entry @key=:bar @action=<StateFlow::Base::Action @success_key=:baz @if=#{@proc_inspect}>>, " <<
-            '<StateFlow::Base::Entry @key=:baz @action=<StateFlow::Base::Action @success_key=:foo @unless=:some_method?>>' <<
+            '<StateFlow::Entry @key=:foo @action=<StateFlow::Action @success_key=:bar>>, ' <<
+            "<StateFlow::Entry @key=:bar @action=<StateFlow::Action @success_key=:baz @if=#{@proc_inspect}>>, " <<
+            '<StateFlow::Entry @key=:baz @action=<StateFlow::Action @success_key=:foo @unless=:some_method?>>' <<
             ']>'
         end
         
@@ -132,9 +132,9 @@ describe StateFlow::Base do
           @flow.inspect.should == '<StateFlow::Base @attr_name=:status @attr_key_name=:status_key' <<
             " @klass=#{@target.name.inspect}" <<
             ' @entries=[' <<
-            '<StateFlow::Base::Entry @key=:foo @action=<StateFlow::Base::Action @success_key=:bar>>, ' <<
-            '<StateFlow::Base::Entry @key=:bar @action=<StateFlow::Base::Action @success_key=:baz @lock=true>>, ' <<
-            '<StateFlow::Base::Entry @key=:baz @action=<StateFlow::Base::Action @success_key=:foo @lock=true>>' <<
+            '<StateFlow::Entry @key=:foo @action=<StateFlow::Action @success_key=:bar>>, ' <<
+            '<StateFlow::Entry @key=:bar @action=<StateFlow::Action @success_key=:baz @lock=true>>, ' <<
+            '<StateFlow::Entry @key=:baz @action=<StateFlow::Action @success_key=:foo @lock=true>>' <<
             ']>'
         end
         
@@ -168,9 +168,9 @@ describe StateFlow::Base do
           @flow.inspect.should == '<StateFlow::Base @attr_name=:status @attr_key_name=:status_key' <<
             " @klass=#{@target.name.inspect}" <<
             ' @entries=[' <<
-            '<StateFlow::Base::Entry @key=:foo @action=<StateFlow::Base::Action @success_key=:bar @failure_key=:baz>>, ' <<
-            '<StateFlow::Base::Entry @key=:bar @action=<StateFlow::Base::Action @success_key=:baz @lock=true>>, ' <<
-            '<StateFlow::Base::Entry @key=:baz @action=<StateFlow::Base::Action @success_key=:foo @lock=true>>' <<
+            '<StateFlow::Entry @key=:foo @action=<StateFlow::Action @success_key=:bar @failure_key=:baz>>, ' <<
+            '<StateFlow::Entry @key=:bar @action=<StateFlow::Action @success_key=:baz @lock=true>>, ' <<
+            '<StateFlow::Entry @key=:baz @action=<StateFlow::Action @success_key=:foo @lock=true>>' <<
             ']>'
         end
         
@@ -205,9 +205,9 @@ describe StateFlow::Base do
           @flow.inspect.should == '<StateFlow::Base @attr_name=:status @attr_key_name=:status_key' <<
             " @klass=#{@target.name.inspect}" <<
             ' @entries=[' <<
-            '<StateFlow::Base::Entry @key=:foo @action=<StateFlow::Base::NamedAction @name=:hoge>>, ' <<
-            '<StateFlow::Base::Entry @key=:bar @action=<StateFlow::Base::NamedAction @name=:hoge @lock=true>>, ' <<
-            '<StateFlow::Base::Entry @key=:baz @action=<StateFlow::Base::NamedAction @name=:hoge @lock=true>>' <<
+            '<StateFlow::Entry @key=:foo @action=<StateFlow::NamedAction @name=:hoge>>, ' <<
+            '<StateFlow::Entry @key=:bar @action=<StateFlow::NamedAction @name=:hoge @lock=true>>, ' <<
+            '<StateFlow::Entry @key=:baz @action=<StateFlow::NamedAction @name=:hoge @lock=true>>' <<
             ']>'
         end
         
@@ -249,9 +249,9 @@ describe StateFlow::Base do
           @flow.inspect.should == '<StateFlow::Base @attr_name=:status @attr_key_name=:status_key' <<
             " @klass=#{@target.name.inspect}" <<
             ' @entries=[' <<
-            '<StateFlow::Base::Entry @key=:foo @action=<StateFlow::Base::NamedAction @name=:hoge @success_key=:bar>>, ' <<
-            '<StateFlow::Base::Entry @key=:bar @action=<StateFlow::Base::NamedAction @name=:hoge @success_key=:baz @lock=true>>, ' <<
-            '<StateFlow::Base::Entry @key=:baz @action=<StateFlow::Base::NamedAction @name=:hoge @success_key=:foo @lock=true>>' <<
+            '<StateFlow::Entry @key=:foo @action=<StateFlow::NamedAction @name=:hoge @success_key=:bar>>, ' <<
+            '<StateFlow::Entry @key=:bar @action=<StateFlow::NamedAction @name=:hoge @success_key=:baz @lock=true>>, ' <<
+            '<StateFlow::Entry @key=:baz @action=<StateFlow::NamedAction @name=:hoge @success_key=:foo @lock=true>>' <<
             ']>'
         end
         
@@ -310,17 +310,17 @@ describe StateFlow::Base do
           @flow.inspect.should == '<StateFlow::Base @attr_name=:status @attr_key_name=:status_key' <<
             " @klass=#{@target.name.inspect}" <<
             ' @entries=[' <<
-              '<StateFlow::Base::Entry @key=:foo @events=[' << 
-                '<StateFlow::Base::Event @name=:event1 @action=<StateFlow::Base::Action @success_key=:bar>>, ' << 
-                '<StateFlow::Base::Event @name=:event2 @action=<StateFlow::Base::Action @success_key=:baz>>' << 
+              '<StateFlow::Entry @key=:foo @events=[' << 
+                '<StateFlow::Event @name=:event1 @action=<StateFlow::Action @success_key=:bar>>, ' << 
+                '<StateFlow::Event @name=:event2 @action=<StateFlow::Action @success_key=:baz>>' << 
               ']>, ' <<
-              '<StateFlow::Base::Entry @key=:bar @events=[' << 
-                '<StateFlow::Base::Event @name=:event1 @action=<StateFlow::Base::Action @success_key=:baz @lock=true>>, ' << 
-                '<StateFlow::Base::Event @name=:event2 @action=<StateFlow::Base::Action @success_key=:foo @lock=true>>' << 
+              '<StateFlow::Entry @key=:bar @events=[' << 
+                '<StateFlow::Event @name=:event1 @action=<StateFlow::Action @success_key=:baz @lock=true>>, ' << 
+                '<StateFlow::Event @name=:event2 @action=<StateFlow::Action @success_key=:foo @lock=true>>' << 
               ']>, ' <<
-              '<StateFlow::Base::Entry @key=:baz @events=[' << 
-                '<StateFlow::Base::Event @name=:event1 @action=<StateFlow::Base::Action @success_key=:foo @lock=true>>, ' << 
-                '<StateFlow::Base::Event @name=:event2 @action=<StateFlow::Base::Action @success_key=:bar @lock=true>>' << 
+              '<StateFlow::Entry @key=:baz @events=[' << 
+                '<StateFlow::Event @name=:event1 @action=<StateFlow::Action @success_key=:foo @lock=true>>, ' << 
+                '<StateFlow::Event @name=:event2 @action=<StateFlow::Action @success_key=:bar @lock=true>>' << 
               ']>' <<
             ']>'
         end
@@ -407,17 +407,17 @@ describe StateFlow::Base do
           @flow.inspect.should == '<StateFlow::Base @attr_name=:status @attr_key_name=:status_key' <<
             " @klass=#{@target.name.inspect}" <<
             ' @entries=[' <<
-              '<StateFlow::Base::Entry @key=:foo @events=[' << 
-                '<StateFlow::Base::Event @name=:event1 @action=<StateFlow::Base::NamedAction @name=:hoge @success_key=:bar>>, ' << 
-                '<StateFlow::Base::Event @name=:event2 @action=<StateFlow::Base::NamedAction @name=:hage @success_key=:baz>>' << 
+              '<StateFlow::Entry @key=:foo @events=[' << 
+                '<StateFlow::Event @name=:event1 @action=<StateFlow::NamedAction @name=:hoge @success_key=:bar>>, ' << 
+                '<StateFlow::Event @name=:event2 @action=<StateFlow::NamedAction @name=:hage @success_key=:baz>>' << 
               ']>, ' <<
-              '<StateFlow::Base::Entry @key=:bar @events=[' << 
-                '<StateFlow::Base::Event @name=:event1 @action=<StateFlow::Base::NamedAction @name=:hoge @success_key=:baz @lock=true>>, ' << 
-                '<StateFlow::Base::Event @name=:event2 @action=<StateFlow::Base::NamedAction @name=:hage @success_key=:foo @lock=true>>' << 
+              '<StateFlow::Entry @key=:bar @events=[' << 
+                '<StateFlow::Event @name=:event1 @action=<StateFlow::NamedAction @name=:hoge @success_key=:baz @lock=true>>, ' << 
+                '<StateFlow::Event @name=:event2 @action=<StateFlow::NamedAction @name=:hage @success_key=:foo @lock=true>>' << 
               ']>, ' <<
-              '<StateFlow::Base::Entry @key=:baz @events=[' << 
-                '<StateFlow::Base::Event @name=:event1 @action=<StateFlow::Base::NamedAction @name=:hoge @success_key=:foo @lock=true>>, ' << 
-                '<StateFlow::Base::Event @name=:event2 @action=<StateFlow::Base::NamedAction @name=:hage @success_key=:bar @lock=true>>' << 
+              '<StateFlow::Entry @key=:baz @events=[' << 
+                '<StateFlow::Event @name=:event1 @action=<StateFlow::NamedAction @name=:hoge @success_key=:foo @lock=true>>, ' << 
+                '<StateFlow::Event @name=:event2 @action=<StateFlow::NamedAction @name=:hage @success_key=:bar @lock=true>>' << 
               ']>' <<
             ']>'
         end
