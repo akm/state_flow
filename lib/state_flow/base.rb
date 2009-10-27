@@ -141,8 +141,11 @@ module StateFlow
       origin_state_key = record.send(attr_key_name)
       begin
         yield(record) if block_given?
-        record.send("#{attr_key_name}=", success_key)
-        record.save!
+        # success_keyが指定されない場合、その変更はアクションとして指定されたメソッドに依存します。
+        if success_key 
+          record.send("#{attr_key_name}=", success_key)
+          record.save!
+        end
       rescue Exception => error
         StateFlow::Log.error(error, 
           :target => record,
@@ -250,7 +253,15 @@ module StateFlow
       Event.new(self, name)
     end
 
+    def inspect
+      result = "<#{self.class.name} @attr_name=#{@attr_name.inspect} @attr_key_name=#{@attr_key_name.inspect}"
+      result << " @klass=\"#{@klass.name}\""
+      result << " @entries=#{@entries.inspect}"
+      result << '>'
+    end
+
     
+
     private
 
     def raise_invalid_state_argument
@@ -314,6 +325,15 @@ module StateFlow
           self.record = nil
         end
       end
+      
+      def inspect
+        result = "<#{self.class.name}"
+        result << " @name=#{@name.inspect}" if @name
+        result << " @success_key=#{@success_key.inspect}" if @success_key
+        result << " @failure_key=#{@failure_key.inspect}" if @failure_key
+        result << " @lock=#{@lock.inspect}" if @lock
+        result << '>'
+      end
     end
     
     class NamedAction < Action
@@ -347,6 +367,12 @@ module StateFlow
         @flow = flow
         @name = name.to_s.to_sym
       end
+
+      def inspect
+        result = "<#{self.class.name} @name=#{@name.inspect}"
+        result << " @action=#{@action.inspect}" if @action
+        result << ">"
+      end
     end
 
     class Entry
@@ -368,11 +394,23 @@ module StateFlow
 
       def process(&block)
         value = flow.state_cd_by_key(key)
-        if record = flow.klass.find(:first, :order => "id asc",
-            :lock => action ? action.lock : false,
-            :conditions => ["#{flow.attr_name} = ?", value])
+        find_options = {
+          :order => "id asc",
+          :conditions => ["#{flow.attr_name} = ?", value]
+        }
+        find_options[:lock] = action.lock if action.lock
+        if record = flow.klass.find(:first, find_options)
           action.process(record, &block) if action
         end
+      end
+      
+      def inspect
+        result = "<#{self.class.name} @key=#{@key.inspect}"
+        result << " @action=#{@action.inspect}" if @action
+        if @events && !@events.empty?
+          result << " @events=#{@events.sort_by{|event|event.name.to_s}.inspect}"
+        end
+        result << ">"
       end
     end
     
