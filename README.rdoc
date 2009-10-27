@@ -1,13 +1,85 @@
-ArStateFlow
-===========
+= StateFlow
+== StateFlowとは？
 
-Introduction goes here.
+状態遷移のためのDSLを提供するためのActiveRecordを拡張するプラグインです。
+
+以下のような記述が可能です。
+
+ class Page < ActiveRecord::Base
+   validates_presence_of :name
+
+   selectable_attr :status_cd do
+     entry '01', :editable       , '編集可'
+     entry '04', :waiting_publish, '公開待ち'
+     entry '05', :publishing     , '公開処理中'
+     entry '06', :publishing_done, '公開処理完了'
+     entry '07', :published      , '公開済'
+     entry '08', :publish_failure, '公開失敗'
+   end
+
+   state_flow(:status_cd) do
+     state :created => {event(:publish) => :waiting_publish, :lock => true}
+
+     with_options(:failure => :publish_failure) do |publishing|
+       publishing.state :waiting_publish => :publishing, :lock => true
+       publishing.state :publishing => {action(:start_publish) => :publishing_done}
+       publishing.state :publishing_done => :published, :if => :accessable?
+       publishing.state :publish_failure
+     end
+
+     state :published
+   end
+
+   def start_publish
+     # 公開時の処理
+   end
+ end
+
+== セットアップ
+state_flowプラグインはselectable_attrに依存しています。
+
+- selectable_attr
+-- http://github.com/akm/selectable_attr
+- selectable_attr_rails
+-- http://github.com/akm/selectable_attr_rails
+
+== Railsで使う場合
+
+=== プラグインとしてインストール
+ ruby script/plugin install git://github.com/akm/selectable_attr.git
+ ruby script/plugin install git://github.com/akm/selectable_attr_rails.git
+ ruby script/plugin install git://github.com/akm/state_flow.git
+でオッケーです。
+
+== gemの場合
+まずgemcutterの設定をしていなかったら、
+ gem install gemcutter
+ gem tumble
+を実行した後、
+ gem install selectable_attr selectable_attr_rails state_flow
+を実行するとインストール完了。
+
+で、config/initializersに以下の２つのファイルを作成すればオッケーです。
+
+config/initializers/selectable_attr.rb
+
+ require 'selectable_attr'
+ require 'selectable_attr_i18n'
+ require 'selectable_attr_rails'
+ SelectableAttrRails.add_features_to_rails
+
+config/initializers/state_flow.rb
+
+ require 'state_flow'
+ ActiveRecord::Base.module_eval do
+   include StateFlow
+ end
 
 
-Example
-=======
+== Example
+以下のテスト用のモデルや、テストをご覧ください。
+http://github.com/akm/state_flow/blob/master/spec/resources/models/page.rb
+http://github.com/akm/state_flow/blob/master/spec/page_spec.rb
 
-Example goes here.
 
-
-Copyright (c) 2009 [name of plugin creator], released under the MIT license
+Copyright (c) 2009 [Takeshi AKIMA], released under the MIT license
