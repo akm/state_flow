@@ -227,6 +227,8 @@ module StateFlow
       action.success_key = success_key.to_sym if success_key
       action.failure_key = options.delete(:failure)
       action.lock = options.delete(:lock)
+      action.if = options.delete(:if)
+      action.unless = options.delete(:unless)
       action
     end
 
@@ -259,6 +261,16 @@ module StateFlow
 
     private
 
+    COMMON_OPTION_NAMES = [:lock, :if, :unless, :failure]
+
+    def extract_common_options(hash)
+      COMMON_OPTION_NAMES.inject({}) do |dest, name|
+        value = hash.delete(name)
+        dest[name] = value if value
+        dest
+      end
+    end
+
     def raise_invalid_state_argument
       raise ArgumentError, state_argument_pattern
     end
@@ -277,22 +289,13 @@ module StateFlow
       descriptions.split(/$/).map{|s| s.sub(/^\s{8}/, '')}.join("\n")
     end
 
-    COMMON_OPTION_NAMES = [:lock, :if, :unless, :failure]
-
-    def extract_common_options(hash)
-      COMMON_OPTION_NAMES.inject({}) do |dest, name|
-        value = hash.delete(name)
-        dest[name] = value if value
-        dest
-      end
-    end
 
     
     class Action
       attr_reader :flow
       attr_accessor :success_key
       attr_accessor :failure_key
-      attr_accessor :lock
+      attr_accessor :lock, :if, :unless
 
       def initialize(flow)
         @flow = flow
@@ -308,6 +311,8 @@ module StateFlow
       end
 
       def process(record)
+        return if self.if && !call_or_send(self.if, record)
+        return if self.unless && call_or_send(self.unless, record)
         self.record = record
         begin
           block_given? ? yield(self) : proceed
@@ -319,6 +324,11 @@ module StateFlow
       def proceed
         flow.process_with_log(self.record, success_key, failure_key)
       end
+      
+      def call_or_send(filter, record)
+        filter.respond_to?(:call) ? filter.call(record) :
+          filter.is_a?(Array) ? record.send(*filter) : record.send(filter)
+      end
 
       def inspect
         result = "<#{self.class.name}"
@@ -326,6 +336,8 @@ module StateFlow
         result << " @success_key=#{@success_key.inspect}" if @success_key
         result << " @failure_key=#{@failure_key.inspect}" if @failure_key
         result << " @lock=#{@lock.inspect}" if @lock
+        result << " @if=#{@if.inspect}" if @if
+        result << " @unless=#{@unless.inspect}" if @unless
         result << '>'
       end
     end

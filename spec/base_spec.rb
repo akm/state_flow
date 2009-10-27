@@ -79,6 +79,45 @@ describe StateFlow::Base do
         end
       end
 
+      describe "state(:<state_name> => :<new_state_name>) with :if/:unless" do
+        before(:each) do
+          proc_obj = Proc.new{|record| true} # インスタンス変数に格納するとなぜかうまく動かないんです・・・？
+          @proc_inspect = proc_obj.inspect
+          @flow = @target.state_flow(:status) do
+            state :foo => :bar
+            state :bar => :baz, :if => proc_obj
+            state({:baz => :foo}, {:unless => :some_method?})
+          end
+        end
+        
+        it "inspect" do
+          klass_name = 
+          @flow.inspect.should == '<StateFlow::Base @attr_name=:status @attr_key_name=:status_key' <<
+            " @klass=#{@target.name.inspect}" <<
+            ' @entries=[' <<
+            '<StateFlow::Base::Entry @key=:foo @action=<StateFlow::Base::Action @success_key=:bar>>, ' <<
+            "<StateFlow::Base::Entry @key=:bar @action=<StateFlow::Base::Action @success_key=:baz @if=#{@proc_inspect}>>, " <<
+            '<StateFlow::Base::Entry @key=:baz @action=<StateFlow::Base::Action @success_key=:foo @unless=:some_method?>>' <<
+            ']>'
+        end
+        
+        it "check" do
+          @flow[:foo].key.should == :foo
+          @flow[:foo].events.should == []
+          @flow[:foo].success_key.should == :bar
+          @flow[:foo].options.should == {}
+          @flow[:bar].key.should == :bar
+          @flow[:bar].events.should == []
+          @flow[:bar].success_key.should == :baz
+          @flow[:bar].action.if.class.should == Proc 
+          @flow[:baz].key.should == :baz
+          @flow[:baz].events.should == []
+          @flow[:baz].success_key.should == :foo
+          @flow[:baz].action.unless.should == :some_method?
+        end
+      end
+
+
       describe "state(:<state_name> => :<new_state_name>)" do
         before(:each) do
           @flow = @target.state_flow(:status) do

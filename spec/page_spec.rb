@@ -325,5 +325,58 @@ describe Page do
   end
   
 
+  describe ":publishing_done => :published, :if => :accessable?" do
+    it "valid" do
+      p1 = Page.create(:name => "published top page", :status_cd => Page.status_id_by_key(:publishing_done))
+      Page.process_state(:status_cd, :publishing_done)
+      # Page.process_stateによってaccessable?が実行されて、
+      # trueならステータス変更されます。このケースではtrueを返します。
+      Page.count.should == 1
+      Page.count(:conditions => ["status_cd = ?", Page.status_id_by_key(:publishing_done)]).should == 0
+      Page.count(:conditions => ["status_cd = ?", Page.status_id_by_key(:published)]).should == 1
+      StateFlow::Log.count.should == 0
+    end
+
+    it "do nothing" do
+      p1 = Page.create(:name => "closed top page", :status_cd => Page.status_id_by_key(:publishing_done))
+      Page.process_state(:status_cd, :publishing_done)
+      # Page.process_stateによってaccessable?が実行されて、
+      # trueならステータス変更されます。このケースではfalseを返すので何も実行しません。
+      Page.count.should == 1
+      Page.count(:conditions => ["status_cd = ?", Page.status_id_by_key(:publishing_done)]).should == 1
+      Page.count(:conditions => ["status_cd = ?", Page.status_id_by_key(:published)]).should == 0
+      StateFlow::Log.count.should == 0
+    end
+
+    it "validation error" do
+      Page.logger.debug("*" * 100)
+      p1 = Page.create(:name => "top page", :status_cd => Page.status_id_by_key(:publishing))
+      p1_backup = Page.find(p1.id)
+      p1.name = nil
+      p1.valid?.should == false
+      Page.should_receive(:find).with(:first,
+        :conditions => ["status_cd = ?", Page.status_id_by_key(:publishing)], :order => "id asc").and_return(p1)
+      Page.should_receive(:find).with(p1.id).and_return(p1_backup)
+      
+      lambda{
+        Page.process_state(:status_cd, :publishing)
+      }.should raise_error(ActiveRecord::RecordInvalid)
+      Page.count.should == 1
+      Page.count(:conditions => ["status_cd = ?", Page.status_id_by_key(:publishing)]).should == 0
+      Page.count(:conditions => ["status_cd = ?", Page.status_id_by_key(:publishing_done)]).should == 0
+      Page.count(:conditions => ["status_cd = ?", Page.status_id_by_key(:publish_failure)]).should == 1
+      StateFlow::Log.count.should == 1
+      log = StateFlow::Log.first
+      log.target_type.should == 'Page'
+      log.target_id.should == p1.id
+      log.origin_state.should == '05'
+      log.origin_state_key.should == 'publishing'
+      log.dest_state.should == nil # '06' # メソッド内で指定しているのでnil
+      log.dest_state_key.should == nil # 'publishing_done' # メソッド内で指定しているのでnil
+      log.level.should == 'error'
+      log.descriptions.should =~ /^Validation failed: Name can't be blank/
+      log.descriptions.should =~ /spec\/page_spec.rb/
+    end
+  end
   
 end

@@ -61,6 +61,8 @@ class Page < ActiveRecord::Base
   end
 
   def accessable?
+    # 本来なら実際のページにアクセスしてみてオッケーかどうかを確認するような処理を書きます。
+    name =~ /published/
   end
 
   
