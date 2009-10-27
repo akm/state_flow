@@ -7,7 +7,7 @@ describe StateFlow::Base do
     before(:each) do
       @target = Class.new do
         include ::SelectableAttr::Base
-        extend ::StateFlow::Base::ClassMethods
+        include ::StateFlow
 
         selectable_attr(:status) do
           entry '01', :foo, "FOO"
