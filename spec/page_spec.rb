@@ -379,4 +379,80 @@ describe Page do
     end
   end
   
+
+  describe ":published => {event(:close) => :waiting_closing}" do
+    it "valid" do
+      p1 = Page.create(:name => "top page", :status_cd => Page.status_id_by_key(:published))
+      p1.close
+      p1.reload
+      p1.status_key.should == :waiting_closing
+      StateFlow::Log.count.should == 0
+    end
+
+    it "validation error" do
+      p1 = Page.create(:name => "top page", :status_cd => Page.status_id_by_key(:published))
+      p1.name = nil
+      lambda{
+        p1.close
+      }.should raise_error(ActiveRecord::RecordInvalid)
+      p1.reload
+      p1.status_key.should == :published
+      #
+      StateFlow::Log.count.should == 1
+      log = StateFlow::Log.first
+      log.target_type.should == 'Page'
+      log.target_id.should == p1.id
+      log.origin_state.should == '07'
+      log.origin_state_key.should == 'published'
+      log.dest_state.should == '09'
+      log.dest_state_key.should == 'waiting_closing'
+      log.level.should == 'error'
+      log.descriptions.should =~ /^Validation failed: Name can't be blank/
+      log.descriptions.should =~ /spec\/page_spec.rb/
+    end
+  end
+
+
+
+  describe ":waiting_closing => :closing, :lock => true" do
+    it "valid" do
+      p1 = Page.create(:name => "top page", :status_cd => Page.status_id_by_key(:waiting_closing))
+      Page.should_receive(:find).with(:first, :lock => true,
+        :conditions => ["status_cd = ?", '09'], :order => "id asc").and_return(p1)
+      Page.process_state(:status_cd, :waiting_closing)
+      #
+      Page.count.should == 1
+      Page.count(:conditions => "status_cd = '09'").should == 0
+      Page.count(:conditions => "status_cd = '10'").should == 1
+    end
+
+    it "validation error" do
+      p1 = Page.create(:name => "top page", :status_cd => Page.status_id_by_key(:waiting_closing))
+      p1_backup = Page.find(p1.id)
+      p1.name = nil
+      Page.should_receive(:find).with(:first, :lock => true,
+        :conditions => ["status_cd = ?", '09'], :order => "id asc").and_return(p1)
+      Page.should_receive(:find).with(p1.id).and_return(p1_backup)
+      lambda{
+        Page.process_state(:status_cd, :waiting_closing)
+      }.should raise_error(ActiveRecord::RecordInvalid)
+
+      Page.count.should == 1
+      Page.count(:conditions => "status_cd = '09'").should == 0
+      Page.count(:conditions => "status_cd = '10'").should == 0
+      Page.count(:conditions => "status_cd = '12'").should == 1
+      StateFlow::Log.count.should == 1
+      log = StateFlow::Log.first
+      log.target_type.should == 'Page'
+      log.target_id.should == p1.id
+      log.origin_state.should == '09'
+      log.origin_state_key.should == 'waiting_closing'
+      log.dest_state.should == '10'
+      log.dest_state_key.should == 'closing'
+      log.level.should == 'error'
+      log.descriptions.should =~ /^Validation failed: Name can't be blank/
+      log.descriptions.should =~ /spec\/page_spec.rb/
+    end
+
+  end
 end
