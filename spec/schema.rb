@@ -1,7 +1,7 @@
 ActiveRecord::Schema.define(:version => 0) do
   # Users are created and updated by other Users
-  create_table :pages, :force => true do |t|
-    t.column :name,           :string
+  create_table :orders, :force => true do |t|
+    t.column :product_name,   :string
     t.column :status_cd ,     :string, :limit => 2, :null => false, :default => '00'
     t.column :created_on,     :datetime
     t.column :updated_at,     :datetime

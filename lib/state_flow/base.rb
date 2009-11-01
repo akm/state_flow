@@ -35,28 +35,15 @@ module StateFlow
     end
     
     attr_reader :klass, :attr_name, :attr_key_name, :status_keys
-    attr_reader :entries
     def initialize(klass, attr_name, attr_key_name)
       @klass, @attr_name, @attr_key_name = klass, attr_name, attr_key_name
       @status_keys = klass.send(@attr_key_name.to_s.pluralize).map{|s| s.to_sym}
-      @entries = []
     end
 
     def state_cd_by_key(key)
       @state_cd_by_key_method_name ||= "#{klass.enum_base_name(attr_name)}_id_by_key"
       klass.send(@state_cd_by_key_method_name, key)
     end
-    
-    def entry_for(key)
-      unless @entry_hash
-        @entry_hash = entries.inject({}) do |dest, entry|
-          dest[entry.key] = entry
-          dest
-        end
-      end
-      @entry_hash[key]
-    end
-    alias_method :[], :entry_for
 
     def process_with_log(record, success_key, failure_key)
       origin_state = record.send(attr_name)

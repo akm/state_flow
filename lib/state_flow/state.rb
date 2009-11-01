@@ -2,7 +2,7 @@
 require 'state_flow'
 module StateFlow
 
-  class Action
+  class State
   end
-  
+
 end
