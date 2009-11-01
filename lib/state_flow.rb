@@ -2,10 +2,7 @@ module StateFlow
   autoload :Base, 'state_flow/base'
   autoload :Builder, 'state_flow/builder'
 
-  autoload :Entry, 'state_flow/entry'
   autoload :State, 'state_flow/state'
-  autoload :Selection, 'state_flow/selection'
-
   autoload :Transition, 'state_flow/transition'
   
   autoload :Action, 'state_flow/action'
