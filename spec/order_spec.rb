@@ -7,6 +7,31 @@ describe Order do
     Order.delete_all
   end
 
+  describe "cach_on_delivery" do
+    before do
+      @order = Order.new
+      @order.product_name = "Beautiful Code"
+      @order.payment_type = :cash_on_delivery
+      @order.status_key = :waiting_settling
+      @order.save!
+      Order.count == 1
+    end
+    
+    it "reserve_stock succeed" do
+      @order.should_receive(:reserve_stock).once.and_return(:reserve_stock_ok)
+      @order.proceed_status_cd
+      @order.reload
+      @order.status_key.should == :deliver_preparing
+    end
+    
+    it "reserve_stock fails" do
+      @order.should_receive(:reserve_stock).once.and_return(nil)
+      @order.proceed_status_cd
+      @order.reload
+      @order.status_key.should == :settlement_error
+    end
+  end
+  
   describe "structure" do
     it "states" do
       flow = Order.state_flow_for(:status_cd)
@@ -82,32 +107,5 @@ describe Order do
   end
   
 
-
-
-  describe "cach_on_delivery" do
-    before do
-      @order = Order.new
-      @order.product_name = "Beautiful Code"
-      @order.payment_type = :cash_on_delivery
-      @order.status_key = :waiting_settling
-      @order.save!
-      Order.count == 1
-    end
-    
-    it "reserve_stock succeed" do
-      @order.should_receive(:reserve_stock).once.and_return(:reserve_stock_ok)
-      @order.proceed_step_flow
-      @order.reload
-      @order.status_key.should == :deliver_preparing
-    end
-    
-    it "reserve_stock fails" do
-      @order.should_receive(:reserve_stock).once.and_return(nil)
-      @order.proceed_step_flow
-      @order.reload
-      @order.status_key.should == :settlement_error
-    end
-  end
-  
 
 end
