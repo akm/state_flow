@@ -1,6 +1,10 @@
 require 'state_flow'
 module StateFlow
-  class Guard
+
+  class Guard < Entry
+    include EventClient
+    include ActionClient
+
   end
 
 end

@@ -1,11 +1,8 @@
 # -*- coding: utf-8 -*-
 class Order < ActiveRecord::Base
 
-  class SettlementError < StandardError
-  end
-
   selectable_attr :status_cd do
-    entry '00', :initial          , '決済前'
+    entry '00', :waiting_settling , '決済前'
     entry '01', :online_settling  , '決済中'
     entry '02', :receiving        , '入金待ち'
     entry '03', :deliver_preparing, '配送準備中'
@@ -21,6 +18,8 @@ class Order < ActiveRecord::Base
   end
   
   state_flow(:status_cd) do
+    origin(:waiting_settling)
+
     group(:valid) do # 正常系
       # recoverの順番は重要。Exceptionを先に書くと全ての例外は:internal_errorになってしまいます。
       recover(:'Net::HTTPHeaderSyntaxError').to(:external_error)
@@ -29,13 +28,16 @@ class Order < ActiveRecord::Base
 
       group(:auto_cancelable) do # 自動キャンセル可
         
-        from(:initial) do
+        from(:waiting_settling) do
           # actionは続けて書くこともできます。
-          guard(:pay_cash_on_delivery?).action(:reserve_point).action(:reserve_stock).to(:deliver_preparing)
+          guard(:pay_cash_on_delivery?).action(:reserve_point).action(:reserve_stock){
+            event(:reserve_stock_ok).to(:deliver_preparing)
+            event_else.to(:settlement_error)
+          }
           # guard_elseは他のガード(群)に該当しなかった場合のガードです。
-          guard_else.action(:reserve_point).action(:reserve_stock, :temporary => true){|result|
+          guard_else.action(:reserve_point).action(:reserve_stock, :temporary => true){
             # 一行で書けない処理群はブロックを用いて書くことができます。
-            event(result => :reserve_stock_ok){
+            event(:reserve_stock_ok){
               guard(:bank_deposit?).action(:send_mail_thanks).to(:receiving)
               guard(:credit_card?).to(:online_settling)
               guard(:foreign_payment?).action(:settle).to(:online_settling)
@@ -52,8 +54,8 @@ class Order < ActiveRecord::Base
         end
         
         from(:online_settling) do
-          guard(:credit_card?).action(:settle){|result|
-            event(result => :settlement_ok).action(:reserve_stock).action(:send_mail_thanks).to(:deliver_preparing)
+          guard(:credit_card?).action(:settle){
+            event(:settlement_ok).action(:reserve_stock).action(:send_mail_thanks).to(:deliver_preparing)
             event_else.action(:release_stock).action(:delete_point).to(:settlement_error)
           }
           guard(:foreign_payment?){
@@ -68,7 +70,7 @@ class Order < ActiveRecord::Base
         end
           
         from :receiving do
-          event :confirm_receiving {
+          event(:confirm_receiving) {
             action :reserve_stock
             action :send_mail_payment_complete
             to :deliver_preparing
@@ -82,11 +84,11 @@ class Order < ActiveRecord::Base
             to(:deliver_requested)
         end
         
-        event :cancel_request {
+        event(:cancel_request) {
           action(:send_mail_cancel_requested)
         }.to(:cancel_requested)
 
-        event :cancel {
+        event(:cancel) {
           action(:release_reserve)
           action(:delete_point)
           action(:send_mail_cancel_complete)
@@ -95,7 +97,7 @@ class Order < ActiveRecord::Base
 
       from(:deliver_requested) do
         event(:deliver).action(:send_mail_shipping_for_shop).action(:send_mail_shipping_for_customer).to(:delivered)
-        event :cancel_request.action(:send_mail_cancel_requested).to(:cancel_requested)
+        event(:cancel_request).action(:send_mail_cancel_requested).to(:cancel_requested)
       end
       
       from(:delivered) do
@@ -106,7 +108,7 @@ class Order < ActiveRecord::Base
       
       state_group(:canceling) do # 正常なキャンセル系
         from :cancel_requested do
-          event :accept_cancel {
+          event(:accept_cancel) {
             action(:release_reserve)
             action(:delete_point)
             action(:send_mail_cancel_complete)
@@ -117,17 +119,29 @@ class Order < ActiveRecord::Base
       end
     end
     
-    state_group(:error) do # 異常系
+    group(:error) do # 異常系
       from(:settlement_error) do
         action(:send_mail_settlement_error)
         # to(:settlement_error) # 遷移しない
       end
       
+      state(:stock_error)
+      state(:internal_error)
+      state(:external_error)
+
       termination # 終端
     end
   end
 
   validates_presence_of :product_name
+
+  attr_accessor :payment_type
+  def pay_cash_on_delivery?; payment_type == :cash_on_delivery; end
+  def bank_deposit?        ; payment_type == :bank_deposit    ; end
+  def credit_card?         ; payment_type == :credit_card     ; end
+  def foreign_payment?     ; payment_type == :foreign_payment ; end
+
+  attr_accessor :reserve_stock_result
 
   def reserve_point; end
   def delete_point; end
