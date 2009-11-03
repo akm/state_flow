@@ -1,6 +1,9 @@
 # -*- coding: utf-8 -*-
 class Order < ActiveRecord::Base
 
+  class StockShortageError < StandardError
+  end
+
   selectable_attr :status_cd do
     entry '00', :waiting_settling , '決済前'
     entry '01', :online_settling  , '決済中'
@@ -42,14 +45,15 @@ class Order < ActiveRecord::Base
               guard(:credit_card?).to(:online_settling)
               guard(:foreign_payment?).action(:settle).to(:online_settling)
             }
-            # こんな風にjunctionが書けると素敵だけど、いまのリリースでは見送ります。
-            # event_else{
-            #   guard(:foreign_payment?).action(:send_mail_stock_shortage)
-            # }.to(:settlement_error)
             event_else{
-              guard(:foreign_payment?).action(:send_mail_stock_shortage).to(:stock_error)
-              guard_else.to(:stock_error)
-            }
+              guard(:foreign_payment?).action(:send_mail_stock_shortage)
+            }.to(:stock_error)
+            
+            # この上の書き方は以下と同じ意味を持ちます。
+            # event_else{
+            #   guard(:foreign_payment?).action(:send_mail_stock_shortage).to(:stock_error)
+            #   guard_else.to(:stock_error)
+            # }
           }
         end
         

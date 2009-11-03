@@ -196,9 +196,7 @@ describe Order do
       e1 = a1.events[1]
       e1.class.should == StateFlow::Event
       e1.guards[0].action.method_name.should == :send_mail_stock_shortage
-      e1.guards[0].action.destination.should == :stock_error
-      e1.guards[1].class.should == StateFlow::Guard
-      e1.guards[1].destination.should == :stock_error
+      e1.destination.should == :stock_error
     end
   end
 
