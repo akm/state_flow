@@ -21,5 +21,3 @@ postgresql:
   host: localhost
   username: postgres
   password: 
-  allow_concurrency: true
-  pool: 30

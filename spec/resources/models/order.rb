@@ -55,6 +55,11 @@ class Order < ActiveRecord::Base
             #   guard_else.to(:stock_error)
             # }
           }
+          
+          # sqlite3ではテスト中にロールバックすると、transactionの中なのに
+          #   cannot rollback - no transaction is active 
+          # とか言われちゃうので、rolling_backをfalseにしてます。
+          recover(StockShortageError, :rolling_back => (ENV['DB'] || 'sqlite3') != 'sqlite3').to(:stock_error)
         end
         
         from(:online_settling) do

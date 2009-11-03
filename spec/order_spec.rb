@@ -52,17 +52,39 @@ describe Order do
         @order.should_receive(:reserve_stock).with(:temporary => true).once.and_return(:reserve_stock_ok)
         @order.process_status_cd
         @order.status_key.should == :online_settling
+        # saveされてません。
         Order.count == 1
         Order.count(:conditions => {:status_cd => Order.status_id_by_key(:waiting_settling)}).should == 1
+        @order.save!
+        Order.count == 1
+        Order.count(:conditions => {:status_cd => Order.status_id_by_key(:online_settling)}).should == 1
       end
 
       it "reserve_stock fails" do
         @order.should_receive(:reserve_point)
         @order.should_receive(:reserve_stock).with(:temporary => true).once.and_return(nil)
-        @order.process_status_cd
+        @order.process_status_cd(:save! => true)
+        @order.status_key.should == :stock_error
+        # saveされてます。
+        Order.count == 1
+        Order.count(:conditions => {:status_cd => Order.status_id_by_key(:waiting_settling)}).should == 0
+        Order.count(:conditions => {:status_cd => Order.status_id_by_key(:stock_error)}).should == 1
+      end
+
+      it "StockShortageError raised" do
+        ActiveRecord::Base.logger.debug("*" * 100)
+        @order.product_name = "Refactoring"
+        @order.should_receive(:reserve_point)
+        @order.should_receive(:reserve_stock).with(:temporary => true).once.and_raise(Order::StockShortageError)
+        Order.transaction do
+          @order.process_status_cd(:save! => true)
+        end
         @order.status_key.should == :stock_error
         Order.count == 1
-        Order.count(:conditions => {:status_cd => Order.status_id_by_key(:waiting_settling)}).should == 1
+        Order.count(:conditions => {:status_cd => Order.status_id_by_key(:stock_error)}).should == 1
+        # ステータスはちゃんと変わっているけど、他のデータはロールバックされていなければならない
+        Order.count(:conditions => {:product_name => "Refactoring"}).should == 0
+        Order.count(:conditions => {:product_name => "Beautiful Code"}).should == 1
       end
     end
 
@@ -166,7 +188,7 @@ describe Order do
       flow = Order.state_flow_for(:status_cd)
       state = flow.origin
       state.guards.length.should == 2
-      state.events.length.should == 0
+      state.events.length.should == 1
       state.action.should be_nil
       g0 = state.guards[0]
       g0.name.should == :pay_cash_on_delivery?

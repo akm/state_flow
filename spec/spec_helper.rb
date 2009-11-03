@@ -33,9 +33,7 @@ unless defined?(RAILS_ENV)
   ActiveRecord::Base.logger.formatter = FormatterWithThread.new
     # ActionController::Base.logger = ActiveRecord::Base.logger
 
-  ActiveRecord::Base.establish_connection(
-    {:pool => 10}.update(config[ENV['DB'] || 'sqlite3'])
-    )
+  ActiveRecord::Base.establish_connection(config[ENV['DB'] || 'sqlite3'])
   
   load(File.join(File.dirname(__FILE__), 'schema.rb'))
  

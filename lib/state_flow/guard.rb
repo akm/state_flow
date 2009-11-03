@@ -10,8 +10,10 @@ module StateFlow
     end
 
     def process(record)
-      action.process(record) if action
-      update_to_destination(record)
+      exception_handlering(record) do
+        action.process(record) if action
+        update_to_destination(record)
+      end
     end
 
   end

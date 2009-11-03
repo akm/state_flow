@@ -19,8 +19,14 @@ module StateFlow
         @state_flows ||= []
         @state_flows << flow
         module_eval(<<-EOS, __FILE__, __LINE__)
-          def process_#{selectable_attr}
+          def process_#{selectable_attr}(options = nil)
+            options = {
+              :save => false,
+              :save! => false,
+            }.update(options || {})
             self.class.state_flow_for(:#{selectable_attr}).process(self)
+            self.save! if options[:save!]
+            self.save if options[:save]
           end
         EOS
         flow

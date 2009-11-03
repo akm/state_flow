@@ -17,7 +17,7 @@ module StateFlow
   autoload :EventClient, 'state_flow/event_client'
   autoload :NamedEvent, 'state_flow/named_event'
   autoload :ActionEvent, 'state_flow/action_event'
-  autoload :Recovery, 'state_flow/recovery'
+  autoload :ExceptionHandler, 'state_flow/exception_handler'
 
   autoload :Log, 'state_flow/log'
   
