@@ -18,7 +18,7 @@ module StateFlow
         result = record.send(method_name, *method_args)
         event = event_for_action_result(result)
         if event
-          event.process(record) 
+          event.process(record)
         elsif action
           action.process(record)
         end

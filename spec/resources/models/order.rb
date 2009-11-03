@@ -32,7 +32,7 @@ class Order < ActiveRecord::Base
           # actionは続けて書くこともできます。
           guard(:pay_cash_on_delivery?).action(:reserve_point).action(:reserve_stock){
             event(:reserve_stock_ok).to(:deliver_preparing)
-            event_else.to(:settlement_error)
+            event_else.to(:stock_error)
           }
           # guard_elseは他のガード(群)に該当しなかった場合のガードです。
           guard_else.action(:reserve_point).action(:reserve_stock, :temporary => true){
@@ -47,8 +47,8 @@ class Order < ActiveRecord::Base
             #   guard(:foreign_payment?).action(:send_mail_stock_shortage)
             # }.to(:settlement_error)
             event_else{
-              guard(:foreign_payment?).action(:send_mail_stock_shortage).to(:settlement_error)
-              guard_else.to(:settlement_error)
+              guard(:foreign_payment?).action(:send_mail_stock_shortage).to(:stock_error)
+              guard_else.to(:stock_error)
             }
           }
         end

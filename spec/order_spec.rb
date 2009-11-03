@@ -15,21 +15,48 @@ describe Order do
         @order.payment_type = :cash_on_delivery
         @order.status_key = :waiting_settling
         @order.save!
-        Order.count == 1
+        Order.count.should == 1
       end
 
       it "reserve_stock succeed" do
         @order.should_receive(:reserve_stock).once.and_return(:reserve_stock_ok)
         @order.process_status_cd
         @order.status_key.should == :deliver_preparing
-        Order.count == 1
+        Order.count.should == 1
         Order.count(:conditions => {:status_cd => Order.status_id_by_key(:waiting_settling)}).should == 1
       end
 
       it "reserve_stock fails" do
         @order.should_receive(:reserve_stock).once.and_return(nil)
         @order.process_status_cd
-        @order.status_key.should == :settlement_error
+        @order.status_key.should == :stock_error
+        Order.count.should == 1
+        Order.count(:conditions => {:status_cd => Order.status_id_by_key(:waiting_settling)}).should == 1
+      end
+    end
+
+    describe "credit_card" do
+      before do
+        @order = Order.new
+        @order.product_name = "Beautiful Code"
+        @order.payment_type = :credit_card
+        @order.status_key = :waiting_settling
+        @order.save!
+        Order.count == 1
+      end
+
+      it "reserve_stock succeed" do
+        @order.should_receive(:reserve_stock).with(:temporary => true).once.and_return(:reserve_stock_ok)
+        @order.process_status_cd
+        @order.status_key.should == :online_settling
+        Order.count == 1
+        Order.count(:conditions => {:status_cd => Order.status_id_by_key(:waiting_settling)}).should == 1
+      end
+
+      it "reserve_stock fails" do
+        @order.should_receive(:reserve_stock).with(:temporary => true).once.and_return(nil)
+        @order.process_status_cd
+        @order.status_key.should == :stock_error
         Order.count == 1
         Order.count(:conditions => {:status_cd => Order.status_id_by_key(:waiting_settling)}).should == 1
       end
@@ -82,7 +109,7 @@ describe Order do
       g0.action.action.method_name.should == :reserve_stock
       g0.action.action.events.length.should == 2
       g0.action.action.events[0].destination.should == :deliver_preparing
-      g0.action.action.events[1].destination.should == :settlement_error
+      g0.action.action.events[1].destination.should == :stock_error
       g1 = state.guards[1]
       g1.class.should == StateFlow::Guard
       g1.action.method_name.should == :reserve_point
@@ -104,9 +131,9 @@ describe Order do
       e1 = a1.events[1]
       e1.class.should == StateFlow::Event
       e1.guards[0].action.method_name.should == :send_mail_stock_shortage
-      e1.guards[0].action.destination.should == :settlement_error
+      e1.guards[0].action.destination.should == :stock_error
       e1.guards[1].class.should == StateFlow::Guard
-      e1.guards[1].destination.should == :settlement_error
+      e1.guards[1].destination.should == :stock_error
     end
   end
 

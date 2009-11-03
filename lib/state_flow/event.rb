@@ -7,7 +7,11 @@ module StateFlow
     include ActionClient
     
     def process(record)
-      action.process(record) if action
+      if guard = guard_for(record)
+        guard.process(record)
+      else
+        action.process(record) if action
+      end
       update_to_destination(record)
     end
     

@@ -11,6 +11,7 @@ module StateFlow
 
     def process(record)
       action.process(record) if action
+      update_to_destination(record)
     end
 
   end
