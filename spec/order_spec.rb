@@ -189,7 +189,7 @@ describe Order do
       end
 
       it "settle succeed" do
-        @order.should_receive(:settle).and_return(:settlement_ok)
+        @order.should_receive(:settle).and_return(:ok)
         @order.should_receive(:reserve_stock)
         @order.should_receive(:send_mail_thanks)
         @order.process_status_cd(:save! => true)

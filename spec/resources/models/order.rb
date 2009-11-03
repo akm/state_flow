@@ -64,7 +64,7 @@ class Order < ActiveRecord::Base
         
         from(:online_settling) do
           guard(:credit_card?).action(:settle){
-            event(:settlement_ok).action(:reserve_stock).action(:send_mail_thanks).to(:deliver_preparing)
+            event(:ok).action(:reserve_stock).action(:send_mail_thanks).to(:deliver_preparing)
             event_else.action(:release_stock).action(:delete_point).to(:settlement_error)
           }
           guard(:foreign_payment?){
