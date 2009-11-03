@@ -19,9 +19,10 @@ module StateFlow
       exceptions.any?{|klass| exception.is_a?(klass)}
     end
 
-    def process(record)
-      record.reload unless record.new_record?
-      record.class.connection.rollback_db_transaction if rolling_back
+    def process(context)
+      ActiveRecord::Base.logger.debug(self.inspect)
+      context.record.class.connection.rollback_db_transaction if rolling_back
+      context.record.reload unless context.record.new_record?
       super
     end
 

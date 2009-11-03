@@ -6,13 +6,13 @@ module StateFlow
     include GuardClient
     include ActionClient
     
-    def process(record)
-      if guard = guard_for(record)
-        guard.process(record)
+    def process(context)
+      if guard = guard_for(context)
+        guard.process(context)
       else
-        action.process(record) if action
+        action.process(context) if action
       end
-      update_to_destination(record)
+      update_to_destination(context)
     end
     
   end

@@ -1,5 +1,6 @@
 module StateFlow
   autoload :Base, 'state_flow/base'
+  autoload :Context, 'state_flow/context'
 
   autoload :Entry, 'state_flow/entry'
 

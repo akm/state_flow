@@ -13,16 +13,16 @@ module StateFlow
       super(origin, &block)
     end
     
-    def process(record)
-      exception_handlering(record) do
-        result = record.send(method_name, *method_args)
+    def process(context)
+      exception_handlering(context) do
+        result = context.record.send(method_name, *method_args)
         event = event_for_action_result(result)
         if event
-          event.process(record)
+          event.process(context)
         elsif action
-          action.process(record)
+          action.process(context)
         end
-        update_to_destination(record)
+        update_to_destination(context)
       end
     end
   end

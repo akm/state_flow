@@ -18,9 +18,9 @@ module StateFlow
       @flow || origin.flow
     end
 
-    def update_to_destination(record)
+    def update_to_destination(context)
       return unless destination
-      record.send("#{flow.attr_key_name}=", destination)
+      context.record.send("#{flow.attr_key_name}=", destination)
     end
 
   end

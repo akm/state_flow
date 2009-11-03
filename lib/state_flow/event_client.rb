@@ -53,7 +53,7 @@ module StateFlow
       end
     end
 
-    def exception_handlering(record)
+    def exception_handlering(context)
       begin
         yield
       rescue Exception => exception
@@ -61,7 +61,7 @@ module StateFlow
         handlers = events.select{|ev| ev.is_a?(ExceptionHandler)}
         handlers.each do |handler|
           next unless handler.match?(exception)
-          handler.process(record)
+          handler.process(context)
           recovered = true if handler.recovering
           break
         end

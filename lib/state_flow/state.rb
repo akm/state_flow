@@ -51,11 +51,11 @@ module StateFlow
     end
 
     public
-    def process(record)
-      exception_handlering(record) do
-        guard = guard_for(record)
-        return guard.process(record) if guard
-        return action.process(record) if action
+    def process(context)
+      exception_handlering(context) do
+        guard = guard_for(context)
+        return guard.process(context) if guard
+        return action.process(context) if action
       end
     end
 

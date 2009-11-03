@@ -19,20 +19,22 @@ describe StateFlow::State do
           @flow = Order.state_flow_for(:status_cd)
           @state = @flow.origin
           @state.name.should == :waiting_settling
+
+          @context = StateFlow::Context.new(@order)
         end
 
         it "should recieve guard process" do
           g0 = @state.guards[0] # :pay_cash_on_delivery?
-          g0.should_receive(:process).with(@order).and_return{|order| g0.action.process(order)}
-          @order.process_status_cd
+          g0.should_receive(:process).with(@context).and_return{|order| g0.action.process(order)}
+          @order.process_status_cd(@context)
           @order.status_key.should == :stock_error
         end
         
         it "should recieve action process #0" do
           g0 = @state.guards[0] # :pay_cash_on_delivery?
           a0 = g0.action # :reserve_point
-          a0.should_receive(:process).with(@order).and_return{|order| a0.action.process(order)}
-          @order.process_status_cd
+          a0.should_receive(:process).with(@context).and_return{|order| a0.action.process(order)}
+          @order.process_status_cd(@context)
           @order.status_key.should == :stock_error
         end
         
@@ -40,8 +42,8 @@ describe StateFlow::State do
           g0 = @state.guards[0] # :pay_cash_on_delivery?
           a0 = g0.action # :reserve_point
           a1 = a0.action # :reserve_stock
-          a1.should_receive(:process).with(@order).and_return{|order| a1.events[0].process(order)}
-          @order.process_status_cd
+          a1.should_receive(:process).with(@context).and_return{|order| a1.events[0].process(order)}
+          @order.process_status_cd(@context)
           @order.status_key.should == :deliver_preparing
         end
 
@@ -55,27 +57,27 @@ describe StateFlow::State do
           it "should recieve action events_for_action" do
             @order.should_receive(:reserve_stock).and_return(nil)
             @a1.should_receive(:event_for_action_result).and_return(@a1.events[0])
-            @order.process_status_cd
+            @order.process_status_cd(@context)
             @order.status_key.should == :deliver_preparing
           end
 
           it "should recieve action events_for_action" do
             @order.should_receive(:reserve_stock).and_return(:reserve_stock_ok)
             @a1.should_receive(:event_for_action_result).and_return(@a1.events[1])
-            @order.process_status_cd
+            @order.process_status_cd(@context)
             @order.status_key.should == :stock_error
           end
         end
 
         it "should recieve action event update_to_destination" do
           @order.should_receive(:reserve_stock).and_return(:reserve_stock_ok)
-          @order.process_status_cd
+          @order.process_status_cd(@context)
           @order.status_key.should == :deliver_preparing
         end
                 
         it "should recieve action event update_to_destination #2" do
           @order.should_receive(:reserve_stock).and_return(nil)
-          @order.process_status_cd
+          @order.process_status_cd(@context)
           @order.status_key.should == :stock_error
         end
       end
@@ -94,6 +96,8 @@ describe StateFlow::State do
           @flow = Order.state_flow_for(:status_cd)
           @state = @flow.origin
           @state.name.should == :waiting_settling
+
+          @context = StateFlow::Context.new(@order)
         end
 
         describe ":reserve_stock_ok" do
@@ -103,8 +107,8 @@ describe StateFlow::State do
 
           it "should recieve guard process" do
             g1 = @state.guards[1]
-            g1.should_receive(:process).with(@order).and_return{|order| g1.action.process(order)}
-            @order.process_status_cd
+            g1.should_receive(:process).with(@context).and_return{|order| g1.action.process(order)}
+            @order.process_status_cd(@context)
           end
 
           it "should recieve action event_for_action_result" do
@@ -113,7 +117,7 @@ describe StateFlow::State do
             a1 = a0.action
             a1.event_for_action_result(:reserve_stock_ok).should == a1.events[0]
             a1.should_receive(:event_for_action_result).and_return(a1.events[0])
-            @order.process_status_cd
+            @order.process_status_cd(@context)
           end
 
           it "should recieve evnet process" do
@@ -121,8 +125,8 @@ describe StateFlow::State do
             a0 = g1.action
             a1 = a0.action
             e0 = a1.events[0]
-            e0.should_receive(:process).with(@order).and_return{|order| e0.guards[1].process(order)}
-            @order.process_status_cd
+            e0.should_receive(:process).with(@context).and_return{|order| e0.guards[1].process(order)}
+            @order.process_status_cd(@context)
           end
 
           it "should recieve evnet process" do
@@ -131,8 +135,8 @@ describe StateFlow::State do
             a1 = a0.action
             e0 = a1.events[0]
             g1 = e0.guards[1]
-            g1.should_receive(:process).with(@order).and_return{|order| g1.update_to_destination(order)}
-            @order.process_status_cd
+            g1.should_receive(:process).with(@context).and_return{|order| g1.update_to_destination(order)}
+            @order.process_status_cd(@context)
           end
         end
         

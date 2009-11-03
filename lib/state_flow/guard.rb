@@ -5,14 +5,14 @@ module StateFlow
     include EventClient
     include ActionClient
 
-    def match?(record)
+    def match?(context)
       true
     end
 
-    def process(record)
-      exception_handlering(record) do
-        action.process(record) if action
-        update_to_destination(record)
+    def process(context)
+      exception_handlering(context) do
+        action.process(context) if action
+        update_to_destination(context)
       end
     end
 

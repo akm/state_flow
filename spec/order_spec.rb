@@ -78,7 +78,8 @@ describe Order do
         @order.should_receive(:reserve_point)
         @order.should_receive(:reserve_stock).with(:temporary => true).once.and_raise(Order::StockShortageError)
         Order.transaction do
-          @order.process_status_cd(:save! => true)
+          context = @order.process_status_cd(:save! => true)
+          ActiveRecord::Base.logger.debug(context.inspect)
         end
         @order.status_key.should == :stock_error
         Order.count.should == 1

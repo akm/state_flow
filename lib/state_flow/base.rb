@@ -19,14 +19,15 @@ module StateFlow
         @state_flows ||= []
         @state_flows << flow
         module_eval(<<-EOS, __FILE__, __LINE__)
-          def process_#{selectable_attr}(options = nil)
-            options = {
-              :save => false,
-              :save! => false,
-            }.update(options || {})
-            self.class.state_flow_for(:#{selectable_attr}).process(self)
-            self.save! if options[:save!]
-            self.save if options[:save]
+          def process_#{selectable_attr}(context_or_options = nil)
+            if context_or_options.is_a?(StateFlow::Context)
+              context = context_or_options
+            else
+              context = StateFlow::Context.new(self, context_or_options)
+            end
+            self.class.state_flow_for(:#{selectable_attr}).process(context)
+            context.save_record_if_need
+            context 
           end
         EOS
         flow
@@ -110,11 +111,11 @@ module StateFlow
       end
     end
 
-    def process(record)
-      current_key = record.send(attr_key_name)
+    def process(context)
+      current_key = context.record.send(attr_key_name)
       state = concrete_states[current_key]
       klass.transaction do
-        state.process(record)
+        state.process(context)
       end
     end
 

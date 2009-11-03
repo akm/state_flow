@@ -9,8 +9,8 @@ module StateFlow
       super(origin, &block)
     end
 
-    def match?(record)
-      record.send(name)
+    def match?(context)
+      context.record.send(name)
     end
   end
 

@@ -18,8 +18,8 @@ module StateFlow
       result
     end
     
-    def guard_for(record)
-      guards.detect{|guard| guard.match?(record)}
+    def guard_for(context)
+      guards.detect{|guard| guard.match?(context)}
     end
     
   end
