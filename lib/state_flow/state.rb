@@ -44,14 +44,18 @@ module StateFlow
       @concreate
     end
 
-    
-
     private
     # for EventClient
     def origin
       self
     end
 
+    public
+    def process(record)
+      guard = guard_for(record)
+      return guard.process(record) if guard
+      return action.process(record) if action
+    end
 
   end
 

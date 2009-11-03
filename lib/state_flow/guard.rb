@@ -5,7 +5,14 @@ module StateFlow
     include EventClient
     include ActionClient
 
+    def match?(record)
+      true
+    end
+
+    def process(record)
+      action.process(record) if action
+    end
+
   end
 
 end
-

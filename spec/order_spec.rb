@@ -7,28 +7,32 @@ describe Order do
     Order.delete_all
   end
 
-  describe "cach_on_delivery" do
-    before do
-      @order = Order.new
-      @order.product_name = "Beautiful Code"
-      @order.payment_type = :cash_on_delivery
-      @order.status_key = :waiting_settling
-      @order.save!
-      Order.count == 1
-    end
-    
-    it "reserve_stock succeed" do
-      @order.should_receive(:reserve_stock).once.and_return(:reserve_stock_ok)
-      @order.proceed_status_cd
-      @order.reload
-      @order.status_key.should == :deliver_preparing
-    end
-    
-    it "reserve_stock fails" do
-      @order.should_receive(:reserve_stock).once.and_return(nil)
-      @order.proceed_status_cd
-      @order.reload
-      @order.status_key.should == :settlement_error
+  describe "from waiting_settling" do
+    describe "cach_on_delivery" do
+      before do
+        @order = Order.new
+        @order.product_name = "Beautiful Code"
+        @order.payment_type = :cash_on_delivery
+        @order.status_key = :waiting_settling
+        @order.save!
+        Order.count == 1
+      end
+
+      it "reserve_stock succeed" do
+        @order.should_receive(:reserve_stock).once.and_return(:reserve_stock_ok)
+        @order.process_status_cd
+        @order.status_key.should == :deliver_preparing
+        Order.count == 1
+        Order.count(:conditions => {:status_cd => Order.status_id_by_key(:waiting_settling)}).should == 1
+      end
+
+      it "reserve_stock fails" do
+        @order.should_receive(:reserve_stock).once.and_return(nil)
+        @order.process_status_cd
+        @order.status_key.should == :settlement_error
+        Order.count == 1
+        Order.count(:conditions => {:status_cd => Order.status_id_by_key(:waiting_settling)}).should == 1
+      end
     end
   end
   
@@ -105,7 +109,5 @@ describe Order do
       e1.guards[1].destination.should == :settlement_error
     end
   end
-  
-
 
 end

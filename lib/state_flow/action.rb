@@ -13,6 +13,20 @@ module StateFlow
       super(origin, &block)
     end
     
+    def process(record)
+      begin
+        result = record.send(method_name, *method_args)
+        event = event_for_action_result(result)
+        if event
+          event.process(record) 
+        elsif action
+          action.process(record)
+        end
+        update_to_destination(record)
+      rescue Exception => err
+        raise err
+      end
+    end
   end
 
 end

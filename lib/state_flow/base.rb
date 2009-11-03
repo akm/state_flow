@@ -4,7 +4,27 @@ module StateFlow
 
   class Base
     
-    module ClassMethods
+    module ClientClassMethods
+      def state_flow_for(selectable_attr)
+        return nil unless @state_flows
+        @state_flows.detect{|flow| flow.attr_name == selectable_attr}
+      end
+
+      def state_flow(selectable_attr, options = nil, &block)
+        options = {
+          :attr_key_name => "#{self.enum_base_name(selectable_attr)}_key".to_sym
+        }.update(options || {})
+        flow = Base.new(self, selectable_attr, options[:attr_key_name])
+        flow.instance_eval(&block)
+        @state_flows ||= []
+        @state_flows << flow
+        module_eval(<<-EOS, __FILE__, __LINE__)
+          def process_#{selectable_attr}
+            self.class.state_flow_for(:#{selectable_attr}).process(self)
+          end
+        EOS
+        flow
+      end
 
       def process_state(selectable_attr, *keys, &block)
         options = {
@@ -30,24 +50,6 @@ module StateFlow
         else
           yield
         end
-      end
-    end
-    
-    module ClientClassMethods
-      def state_flow_for(selectable_attr)
-        return nil unless @state_flows
-        @state_flows.detect{|flow| flow.attr_name == selectable_attr}
-      end
-
-      def state_flow(selectable_attr, options = nil, &block)
-        options = {
-          :attr_key_name => "#{self.enum_base_name(selectable_attr)}_key".to_sym
-        }.update(options || {})
-        flow = Base.new(self, selectable_attr, options[:attr_key_name])
-        flow.instance_eval(&block)
-        @state_flows ||= []
-        @state_flows << flow
-        flow
       end
     end
 
@@ -99,6 +101,14 @@ module StateFlow
         @origin_name = value
       else
         @origin ||= all_states[@origin_name]
+      end
+    end
+
+    def process(record)
+      current_key = record.send(attr_key_name)
+      state = concrete_states[current_key]
+      klass.transaction do
+        state.process(record)
       end
     end
 

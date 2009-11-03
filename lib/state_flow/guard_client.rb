@@ -17,7 +17,10 @@ module StateFlow
       guards << result
       result
     end
-
+    
+    def guard_for(record)
+      guards.detect{|guard| guard.match?(record)}
+    end
     
   end
 

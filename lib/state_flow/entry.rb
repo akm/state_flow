@@ -13,6 +13,16 @@ module StateFlow
     def to(destination)
       @destination = destination
     end
+
+    def flow
+      @flow || origin.flow
+    end
+
+    def update_to_destination(record)
+      return unless destination
+      record.send("#{flow.attr_key_name}=", destination)
+    end
+
   end
 
 end

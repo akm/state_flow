@@ -26,6 +26,15 @@ module StateFlow
       result
     end
 
+    def event_for_action_result(result)
+      events.select do |event|
+        event.is_a?(ActionEvent) || (event.class == Event)
+      end
+      events.detect do |ev|
+        ev.respond_to?(:matcher) ? (ev.matcher === result) : true
+      end
+    end
+
   end
 
 

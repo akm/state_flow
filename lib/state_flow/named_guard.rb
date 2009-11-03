@@ -8,6 +8,10 @@ module StateFlow
       @name = name
       super(origin, &block)
     end
+
+    def match?(record)
+      record.send(name)
+    end
   end
 
 end
