@@ -102,13 +102,13 @@ describe StateFlow::State do
           end
 
           it "should recieve guard process" do
-            g1 = @state.guards[1] # :pay_cash_on_delivery?
+            g1 = @state.guards[1]
             g1.should_receive(:process).with(@order).and_return{|order| g1.action.process(order)}
             @order.process_status_cd
           end
 
           it "should recieve action event_for_action_result" do
-            g1 = @state.guards[1] # :pay_cash_on_delivery?
+            g1 = @state.guards[1]
             a0 = g1.action
             a1 = a0.action
             a1.event_for_action_result(:reserve_stock_ok).should == a1.events[0]
@@ -117,7 +117,7 @@ describe StateFlow::State do
           end
 
           it "should recieve evnet process" do
-            g1 = @state.guards[1] # :pay_cash_on_delivery?
+            g1 = @state.guards[1]
             a0 = g1.action
             a1 = a0.action
             e0 = a1.events[0]
@@ -126,7 +126,7 @@ describe StateFlow::State do
           end
 
           it "should recieve evnet process" do
-            g1 = @state.guards[1] # :pay_cash_on_delivery?
+            g1 = @state.guards[1]
             a0 = g1.action
             a1 = a0.action
             e0 = a1.events[0]

@@ -19,6 +19,7 @@ describe Order do
       end
 
       it "reserve_stock succeed" do
+        @order.should_receive(:reserve_point)
         @order.should_receive(:reserve_stock).once.and_return(:reserve_stock_ok)
         @order.process_status_cd
         @order.status_key.should == :deliver_preparing
@@ -27,6 +28,7 @@ describe Order do
       end
 
       it "reserve_stock fails" do
+        @order.should_receive(:reserve_point)
         @order.should_receive(:reserve_stock).once.and_return(nil)
         @order.process_status_cd
         @order.status_key.should == :stock_error
@@ -46,6 +48,7 @@ describe Order do
       end
 
       it "reserve_stock succeed" do
+        @order.should_receive(:reserve_point)
         @order.should_receive(:reserve_stock).with(:temporary => true).once.and_return(:reserve_stock_ok)
         @order.process_status_cd
         @order.status_key.should == :online_settling
@@ -54,7 +57,69 @@ describe Order do
       end
 
       it "reserve_stock fails" do
+        @order.should_receive(:reserve_point)
         @order.should_receive(:reserve_stock).with(:temporary => true).once.and_return(nil)
+        @order.process_status_cd
+        @order.status_key.should == :stock_error
+        Order.count == 1
+        Order.count(:conditions => {:status_cd => Order.status_id_by_key(:waiting_settling)}).should == 1
+      end
+    end
+
+    describe "bank_deposit" do
+      before do
+        @order = Order.new
+        @order.product_name = "Beautiful Code"
+        @order.payment_type = :bank_deposit
+        @order.status_key = :waiting_settling
+        @order.save!
+        Order.count == 1
+      end
+
+      it "reserve_stock succeed" do
+        @order.should_receive(:reserve_point)
+        @order.should_receive(:reserve_stock).with(:temporary => true).once.and_return(:reserve_stock_ok)
+        @order.should_receive(:send_mail_thanks)
+        @order.process_status_cd
+        @order.status_key.should == :receiving
+        Order.count == 1
+        Order.count(:conditions => {:status_cd => Order.status_id_by_key(:waiting_settling)}).should == 1
+      end
+
+      it "reserve_stock fails" do
+        @order.should_receive(:reserve_point)
+        @order.should_receive(:reserve_stock).with(:temporary => true).once.and_return(nil)
+        @order.process_status_cd
+        @order.status_key.should == :stock_error
+        Order.count == 1
+        Order.count(:conditions => {:status_cd => Order.status_id_by_key(:waiting_settling)}).should == 1
+      end
+    end
+
+    describe "foreign_payment" do
+      before do
+        @order = Order.new
+        @order.product_name = "Beautiful Code"
+        @order.payment_type = :foreign_payment
+        @order.status_key = :waiting_settling
+        @order.save!
+        Order.count == 1
+      end
+
+      it "reserve_stock succeed" do
+        @order.should_receive(:reserve_point)
+        @order.should_receive(:reserve_stock).with(:temporary => true).once.and_return(:reserve_stock_ok)
+        @order.should_receive(:settle)
+        @order.process_status_cd
+        @order.status_key.should == :online_settling
+        Order.count == 1
+        Order.count(:conditions => {:status_cd => Order.status_id_by_key(:waiting_settling)}).should == 1
+      end
+
+      it "reserve_stock fails" do
+        @order.should_receive(:reserve_point)
+        @order.should_receive(:reserve_stock).with(:temporary => true).once.and_return(nil)
+        @order.should_receive(:send_mail_stock_shortage)
         @order.process_status_cd
         @order.status_key.should == :stock_error
         Order.count == 1
