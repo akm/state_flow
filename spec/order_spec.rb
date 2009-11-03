@@ -23,7 +23,7 @@ describe Order do
       it "reserve_stock succeed" do
         @order.should_receive(:reserve_point)
         @order.should_receive(:reserve_stock).once.and_return(:reserve_stock_ok)
-        @order.process_status_cd
+        @order.process_status_cd(:save => false)
         @order.status_key.should == :deliver_preparing
         Order.count.should == 1
         Order.count(:conditions => {:status_cd => Order.status_id_by_key(:waiting_settling)}).should == 1
@@ -32,7 +32,7 @@ describe Order do
       it "reserve_stock fails" do
         @order.should_receive(:reserve_point)
         @order.should_receive(:reserve_stock).once.and_return(nil)
-        @order.process_status_cd
+        @order.process_status_cd(:save => false)
         @order.status_key.should == :stock_error
         Order.count.should == 1
         Order.count(:conditions => {:status_cd => Order.status_id_by_key(:waiting_settling)}).should == 1
@@ -41,7 +41,7 @@ describe Order do
       it "reserve_stock failed by Net::ProtoServerError" do
         @order.should_receive(:reserve_point)
         @order.should_receive(:reserve_stock).once.and_raise(Net::ProtoServerError)
-        @order.process_status_cd(:save! => true)
+        @order.process_status_cd
         @order.status_key.should == :external_error
         # saveされてます。
         Order.count.should == 1
@@ -53,7 +53,7 @@ describe Order do
       it "reserve_stock failed by IOError" do
         @order.should_receive(:reserve_point)
         @order.should_receive(:reserve_stock).once.and_raise(IOError)
-        @order.process_status_cd(:save! => true)
+        @order.process_status_cd
         @order.status_key.should == :internal_error
         # saveされてます。
         Order.count.should == 1
@@ -76,7 +76,7 @@ describe Order do
       it "reserve_stock succeed" do
         @order.should_receive(:reserve_point)
         @order.should_receive(:reserve_stock).with(:temporary => true).once.and_return(:reserve_stock_ok)
-        @order.process_status_cd
+        @order.process_status_cd(:save => false)
         @order.status_key.should == :online_settling
         # saveされてません。
         Order.count.should == 1
@@ -89,7 +89,7 @@ describe Order do
       it "reserve_stock fails" do
         @order.should_receive(:reserve_point)
         @order.should_receive(:reserve_stock).with(:temporary => true).once.and_return(nil)
-        @order.process_status_cd(:save! => true)
+        @order.process_status_cd
         @order.status_key.should == :stock_error
         # saveされてます。
         Order.count.should == 1
@@ -103,7 +103,7 @@ describe Order do
         @order.should_receive(:reserve_point)
         @order.should_receive(:reserve_stock).with(:temporary => true).once.and_raise(Order::StockShortageError)
         Order.transaction do
-          @order.process_status_cd(:save! => true)
+          @order.process_status_cd
         end
         @order.status_key.should == :stock_error
         Order.count.should == 1
@@ -129,7 +129,7 @@ describe Order do
         @order.should_receive(:reserve_point)
         @order.should_receive(:reserve_stock).with(:temporary => true).once.and_return(:reserve_stock_ok)
         @order.should_receive(:send_mail_thanks)
-        @order.process_status_cd
+        @order.process_status_cd(:save => false)
         @order.status_key.should == :receiving
         Order.count.should == 1
         Order.count(:conditions => {:status_cd => Order.status_id_by_key(:waiting_settling)}).should == 1
@@ -138,7 +138,7 @@ describe Order do
       it "reserve_stock fails" do
         @order.should_receive(:reserve_point)
         @order.should_receive(:reserve_stock).with(:temporary => true).once.and_return(nil)
-        @order.process_status_cd
+        @order.process_status_cd(:save => false)
         @order.status_key.should == :stock_error
         Order.count.should == 1
         Order.count(:conditions => {:status_cd => Order.status_id_by_key(:waiting_settling)}).should == 1
@@ -159,7 +159,7 @@ describe Order do
         @order.should_receive(:reserve_point)
         @order.should_receive(:reserve_stock).with(:temporary => true).once.and_return(:reserve_stock_ok)
         @order.should_receive(:settle)
-        @order.process_status_cd
+        @order.process_status_cd(:save => false)
         @order.status_key.should == :online_settling
         Order.count.should == 1
         Order.count(:conditions => {:status_cd => Order.status_id_by_key(:waiting_settling)}).should == 1
@@ -169,7 +169,7 @@ describe Order do
         @order.should_receive(:reserve_point)
         @order.should_receive(:reserve_stock).with(:temporary => true).once.and_return(nil)
         @order.should_receive(:send_mail_stock_shortage)
-        @order.process_status_cd
+        @order.process_status_cd(:save => false)
         @order.status_key.should == :stock_error
         Order.count.should == 1
         Order.count(:conditions => {:status_cd => Order.status_id_by_key(:waiting_settling)}).should == 1
@@ -192,7 +192,7 @@ describe Order do
         @order.should_receive(:settle).and_return(:ok)
         @order.should_receive(:reserve_stock)
         @order.should_receive(:send_mail_thanks)
-        @order.process_status_cd(:save! => true)
+        @order.process_status_cd
         @order.status_key.should == :deliver_preparing
         Order.count.should == 1
         Order.count(:conditions => {:status_cd => Order.status_id_by_key(:deliver_preparing)}).should == 1
@@ -202,7 +202,7 @@ describe Order do
         @order.should_receive(:settle).and_return(nil)
         @order.should_receive(:release_stock)
         @order.should_receive(:delete_point)
-        @order.process_status_cd(:save! => true)
+        @order.process_status_cd
         @order.status_key.should == :settlement_error
         Order.count.should == 1
         Order.count(:conditions => {:status_cd => Order.status_id_by_key(:settlement_error)}).should == 1
@@ -212,7 +212,7 @@ describe Order do
         @order.should_receive(:settle).and_raise(IOError)
         @order.should_receive(:release_stock)
         @order.should_receive(:delete_point)
-        @order.process_status_cd(:save! => true)
+        @order.process_status_cd
         @order.status_key.should == :settlement_error
         Order.count.should == 1
         Order.count(:conditions => {:status_cd => Order.status_id_by_key(:settlement_error)}).should == 1
@@ -233,7 +233,7 @@ describe Order do
         @order.should_not_receive(:settle)
         @order.should_not_receive(:reserve_stock)
         @order.should_not_receive(:send_mail_thanks)
-        @order.process_status_cd(:save! => true)
+        @order.process_status_cd
         @order.status_key.should == :online_settling
         Order.count.should == 1
         Order.count(:conditions => {:status_cd => Order.status_id_by_key(:online_settling)}).should == 1
@@ -243,7 +243,7 @@ describe Order do
         @order.should_not_receive(:settle)
         @order.should_not_receive(:reserve_stock)
         @order.should_not_receive(:send_mail_thanks)
-        @order.settlement_ok(:save! => true) # イベント実行
+        @order.settlement_ok # イベント実行
         @order.status_key.should == :deliver_preparing
         Order.count.should == 1
         Order.count(:conditions => {:status_cd => Order.status_id_by_key(:deliver_preparing)}).should == 1
@@ -253,7 +253,7 @@ describe Order do
         @order.should_receive(:release_stock)
         @order.should_receive(:delete_point)
         @order.should_receive(:send_mail_invalid_purchage)
-        @order.settlement_ng(:save! => true) # イベント実行
+        @order.settlement_ng # イベント実行
         @order.status_key.should == :settlement_error
         Order.count.should == 1
         Order.count(:conditions => {:status_cd => Order.status_id_by_key(:settlement_error)}).should == 1

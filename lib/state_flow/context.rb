@@ -7,17 +7,13 @@ module StateFlow
     def initialize(record, options = nil)
       @record = record
       @options = {
-        :save => false,
-        :save! => false,
+        :save => :save!,
       }.update(options || {})
     end
 
     def save_record_if_need
-      if options[:save!]
-        record.save!
-      elsif options[:save]
-        record.save
-      end
+      return unless options[:save]
+      record.send(options[:save])
     end
 
     def record_send(*args, &block)
