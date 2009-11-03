@@ -91,7 +91,7 @@ describe Order do
         @order.should_receive(:reserve_stock).with(:temporary => true).once.and_return(:reserve_stock_ok)
         @order.should_receive(:reserve_stock).once.and_return(:reserve_stock_ok)
         @order.should_receive(:settle).once.and_return(:ok)
-        @order.process_status_cd(:keep_process => true)
+        @order.process_status_cd
         @order.status_key.should == :deliver_preparing
         # saveされてます。
         Order.count.should == 1
@@ -103,7 +103,7 @@ describe Order do
         @order.should_receive(:reserve_stock).with(:temporary => true).once.and_return(:reserve_stock_ok)
         @order.should_receive(:reserve_stock).once.and_raise(IOError)
         @order.should_receive(:settle).once.and_return(:ok)
-        @order.process_status_cd(:keep_process => true)
+        @order.process_status_cd
         @order.status_key.should == :settlement_error # 決済時の例外はすべて:settlement_errorにします。
         # saveされてます。
         Order.count.should == 1
