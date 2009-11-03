@@ -57,15 +57,14 @@ module StateFlow
       begin
         yield
       rescue Exception => exception
-        recovered = false
+        context.exceptions << exception
         handlers = events.select{|ev| ev.is_a?(ExceptionHandler)}
         handlers.each do |handler|
           next unless handler.match?(exception)
           handler.process(context)
-          recovered = true if handler.recovering
           break
         end
-        raise exception unless recovered
+        raise exception unless context.recovered?(exception)
       end
     end
 

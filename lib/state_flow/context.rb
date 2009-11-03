@@ -3,6 +3,7 @@ module StateFlow
   class Context
     
     attr_reader :record, :options
+    
     def initialize(record, options = nil)
       @record = record
       @options = {
@@ -29,6 +30,18 @@ module StateFlow
 
     def transaction_rollback
       record.class.connection.rollback_db_transaction
+    end
+    
+    def exceptions
+      @exceptions ||= []
+    end
+
+    def recovered_exceptions
+      @recovered_exceptions ||= []
+    end
+
+    def recovered?(exception)
+      recovered_exceptions.include?(exception)
     end
 
   end

@@ -20,7 +20,7 @@ module StateFlow
     end
 
     def process(context)
-      ActiveRecord::Base.logger.debug(self.inspect)
+      context.recovered_exceptions << context.exceptions.last if recovering
       context.transaction_rollback if rolling_back
       context.record_reload_if_possible
       super
