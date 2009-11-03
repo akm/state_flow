@@ -21,8 +21,8 @@ module StateFlow
 
     def process(context)
       ActiveRecord::Base.logger.debug(self.inspect)
-      context.record.class.connection.rollback_db_transaction if rolling_back
-      context.record.reload unless context.record.new_record?
+      context.transaction_rollback if rolling_back
+      context.record_reload_if_possible
       super
     end
 

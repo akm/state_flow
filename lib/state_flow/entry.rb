@@ -20,7 +20,7 @@ module StateFlow
 
     def update_to_destination(context)
       return unless destination
-      context.record.send("#{flow.attr_key_name}=", destination)
+      context.record_send("#{flow.attr_key_name}=", destination)
     end
 
   end

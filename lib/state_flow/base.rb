@@ -112,7 +112,7 @@ module StateFlow
     end
 
     def process(context)
-      current_key = context.record.send(attr_key_name)
+      current_key = context.record_send(attr_key_name)
       state = concrete_states[current_key]
       klass.transaction do
         state.process(context)

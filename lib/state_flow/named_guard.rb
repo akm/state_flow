@@ -10,7 +10,7 @@ module StateFlow
     end
 
     def match?(context)
-      context.record.send(name)
+      context.record_send(name)
     end
   end
 

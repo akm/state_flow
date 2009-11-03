@@ -18,7 +18,19 @@ module StateFlow
         record.save
       end
     end
-    
+
+    def record_send(*args, &block)
+      record.send(*args, &block)
+    end
+
+    def record_reload_if_possible
+      record.reload unless record.new_record?
+    end
+
+    def transaction_rollback
+      record.class.connection.rollback_db_transaction
+    end
+
   end
 
 end
