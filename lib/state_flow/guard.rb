@@ -10,7 +10,7 @@ module StateFlow
     end
 
     def process(context)
-      exception_handlering(context) do
+      exception_handling(context) do
         action.process(context) if action
         update_to_destination(context)
       end

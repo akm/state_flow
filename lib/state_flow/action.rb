@@ -14,7 +14,7 @@ module StateFlow
     end
     
     def process(context)
-      exception_handlering(context) do
+      exception_handling(context) do
         result = context.record.send(method_name, *method_args)
         event = event_for_action_result(result)
         if event

@@ -53,7 +53,7 @@ module StateFlow
       end
     end
 
-    def exception_handlering(context)
+    def exception_handling(context)
       begin
         yield
       rescue Exception => exception

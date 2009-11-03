@@ -52,7 +52,7 @@ module StateFlow
 
     public
     def process(context)
-      exception_handlering(context) do
+      exception_handling(context) do
         guard = guard_for(context)
         return guard.process(context) if guard
         return action.process(context) if action
