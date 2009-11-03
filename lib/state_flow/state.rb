@@ -6,7 +6,7 @@ module StateFlow
     include EventClient
     include GuardClient
     include ActionClient
-    include EntryVisitable
+    include ElementVisitable
 
     attr_reader :name, :flow, :parent
     attr_accessor :termination

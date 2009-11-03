@@ -143,7 +143,6 @@ module StateFlow
     def inspect
       result = "<#{self.class.name} @attr_name=#{@attr_name.inspect} @attr_key_name=#{@attr_key_name.inspect}"
       result << " @klass=\"#{@klass.name}\""
-      result << " @entries=#{@entries.inspect}"
       result << '>'
     end
 

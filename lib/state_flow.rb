@@ -4,8 +4,8 @@ module StateFlow
 
   autoload :State, 'state_flow/state'
   
-  autoload :Entry, 'state_flow/entry'
-  autoload :EntryVisitable, 'state_flow/entry_visitable'
+  autoload :Element, 'state_flow/element'
+  autoload :ElementVisitable, 'state_flow/element_visitable'
 
   autoload :Action, 'state_flow/action'
   autoload :ActionClient, 'state_flow/action_client'

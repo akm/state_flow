@@ -2,8 +2,8 @@
 require 'state_flow'
 module StateFlow
 
-  class Entry
-    include EntryVisitable
+  class Element
+    include ElementVisitable
 
     attr_reader :origin
     attr_reader :destination

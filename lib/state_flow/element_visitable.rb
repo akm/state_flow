@@ -2,7 +2,7 @@
 require 'state_flow'
 module StateFlow
 
-  module EntryVisitable
+  module ElementVisitable
     # Visitorパターン
     def visit(&block)
       results = block.call(self)
@@ -10,8 +10,8 @@ module StateFlow
         next if [:events, :guards, :action].include?(entries_name) && !respond_to?(entries_name)
         entries = send(entries_name)
         entries = [entries] unless entries.is_a?(Array)
-        entries.each do |entry|
-          entry.visit(&block) if entry
+        entries.each do |element|
+          element.visit(&block) if element
         end
       end
     end

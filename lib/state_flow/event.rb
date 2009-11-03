@@ -2,7 +2,7 @@
 require 'state_flow'
 module StateFlow
 
-  class Event < Entry
+  class Event < Element
     include GuardClient
     include ActionClient
     
