@@ -10,15 +10,10 @@ ActiveRecord::Schema.define(:version => 0) do
   create_table :state_flow_logs, :force => true do |t|
     t.string :target_type
     t.integer :target_id
-    t.string :origin_state
-    t.string :origin_state_key
-    t.string :dest_state
-    t.string :dest_state_key
     t.string :level, :limit => 5, :null => false, :default => 'debug'
     t.text   :descriptions
     t.datetime :created_on
     t.datetime :updated_at
   end
-  
  
 end

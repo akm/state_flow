@@ -39,7 +39,7 @@ module StateFlow
       options = {
         :recovering => true, 
         :rolling_back => true, 
-        :logging_error => true
+        :logging => :error
       }.update(args.extract_options!)
       handle_exception(*(args << options), &block)
     end

@@ -44,7 +44,7 @@ describe Order do
         @order.payment_type = :credit_card
         @order.status_key = :waiting_settling
         @order.save!
-        Order.count == 1
+        Order.count.should == 1
       end
 
       it "reserve_stock succeed" do
@@ -53,10 +53,10 @@ describe Order do
         @order.process_status_cd
         @order.status_key.should == :online_settling
         # saveされてません。
-        Order.count == 1
+        Order.count.should == 1
         Order.count(:conditions => {:status_cd => Order.status_id_by_key(:waiting_settling)}).should == 1
         @order.save!
-        Order.count == 1
+        Order.count.should == 1
         Order.count(:conditions => {:status_cd => Order.status_id_by_key(:online_settling)}).should == 1
       end
 
@@ -66,9 +66,10 @@ describe Order do
         @order.process_status_cd(:save! => true)
         @order.status_key.should == :stock_error
         # saveされてます。
-        Order.count == 1
+        Order.count.should == 1
         Order.count(:conditions => {:status_cd => Order.status_id_by_key(:waiting_settling)}).should == 0
         Order.count(:conditions => {:status_cd => Order.status_id_by_key(:stock_error)}).should == 1
+        StateFlow::Log.count.should == 0
       end
 
       it "StockShortageError raised" do
@@ -80,11 +81,12 @@ describe Order do
           @order.process_status_cd(:save! => true)
         end
         @order.status_key.should == :stock_error
-        Order.count == 1
+        Order.count.should == 1
         Order.count(:conditions => {:status_cd => Order.status_id_by_key(:stock_error)}).should == 1
         # ステータスはちゃんと変わっているけど、他のデータはロールバックされていなければならない
         Order.count(:conditions => {:product_name => "Refactoring"}).should == 0
         Order.count(:conditions => {:product_name => "Beautiful Code"}).should == 1
+        # StateFlow::Log.count.should == 1
       end
     end
 
@@ -95,7 +97,7 @@ describe Order do
         @order.payment_type = :bank_deposit
         @order.status_key = :waiting_settling
         @order.save!
-        Order.count == 1
+        Order.count.should == 1
       end
 
       it "reserve_stock succeed" do
@@ -104,7 +106,7 @@ describe Order do
         @order.should_receive(:send_mail_thanks)
         @order.process_status_cd
         @order.status_key.should == :receiving
-        Order.count == 1
+        Order.count.should == 1
         Order.count(:conditions => {:status_cd => Order.status_id_by_key(:waiting_settling)}).should == 1
       end
 
@@ -113,7 +115,7 @@ describe Order do
         @order.should_receive(:reserve_stock).with(:temporary => true).once.and_return(nil)
         @order.process_status_cd
         @order.status_key.should == :stock_error
-        Order.count == 1
+        Order.count.should == 1
         Order.count(:conditions => {:status_cd => Order.status_id_by_key(:waiting_settling)}).should == 1
       end
     end
@@ -125,7 +127,7 @@ describe Order do
         @order.payment_type = :foreign_payment
         @order.status_key = :waiting_settling
         @order.save!
-        Order.count == 1
+        Order.count.should == 1
       end
 
       it "reserve_stock succeed" do
@@ -134,7 +136,7 @@ describe Order do
         @order.should_receive(:settle)
         @order.process_status_cd
         @order.status_key.should == :online_settling
-        Order.count == 1
+        Order.count.should == 1
         Order.count(:conditions => {:status_cd => Order.status_id_by_key(:waiting_settling)}).should == 1
       end
 
@@ -144,7 +146,7 @@ describe Order do
         @order.should_receive(:send_mail_stock_shortage)
         @order.process_status_cd
         @order.status_key.should == :stock_error
-        Order.count == 1
+        Order.count.should == 1
         Order.count(:conditions => {:status_cd => Order.status_id_by_key(:waiting_settling)}).should == 1
       end
     end

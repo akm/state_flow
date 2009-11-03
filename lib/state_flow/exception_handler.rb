@@ -12,7 +12,7 @@ module StateFlow
       super(origin, &block)
       @recovering = options[:recovering] || false
       @rolling_back = options[:rolling_back] || options[:rollback] || false
-      @logging_error = options[:logging_error] || false
+      @logging_error = options[:logging]
     end
     
     def match?(exception)
@@ -21,7 +21,6 @@ module StateFlow
 
     def process(record)
       record.reload unless record.new_record?
-      # record.class.connection.rollback_to_savepoint if rolling_back
       record.class.connection.rollback_db_transaction if rolling_back
       super
     end
