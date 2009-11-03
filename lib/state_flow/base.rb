@@ -22,33 +22,13 @@ module StateFlow
           def process_#{selectable_attr}(context_or_options = nil)
             flow = self.class.state_flow_for(:#{selectable_attr})
             context = flow.prepare_context(self, context_or_options)
-            flow.process(context)
-            context.save_record_if_need
-            context
+            context.process(flow)
           end
         EOS
         NamedEvent.build_event_methods(flow)
         flow
       end
           
-      def process_state(selectable_attr, *keys, &block)
-        options = {
-          :transactional => false, # :each, # :all
-        }.update(keys.extract_options!)
-        options[:transactional] = :each if options[:transactional] == true
-        state_flow = state_flow_for(selectable_attr)
-        raise ArgumentError, "state_flow not found: #{selectable_attr.inspect}" unless state_flow
-        transaction_if_need(options[:transactional] == :all) do
-          keys.each do |key|
-            entry = state_flow[key]
-            raise ArgumentError, "entry not found: #{key.inspect}" unless entry
-            transaction_if_need(options[:transactional] == :each) do
-              entry.process(&block)
-            end
-          end
-        end
-      end
-      
       def transaction_if_need(with_transaction, &block)
         if with_transaction
           self.transaction(&block)
@@ -112,15 +92,13 @@ module StateFlow
     def prepare_context(record, context_or_options = nil)
       context_or_options.is_a?(StateFlow::Context) ?
         context_or_options :
-        StateFlow::Context.new(record, context_or_options)
+        StateFlow::Context.new(self, record, context_or_options)
     end
 
     def process(context)
       current_key = context.record_send(attr_key_name)
       state = concrete_states[current_key]
-      klass.transaction do
-        state.process(context)
-      end
+      state.process(context)
       context
     end
 

@@ -32,9 +32,7 @@ module StateFlow
               events.each do |event|
                 if event.state.include?(self.send(flow.attr_key_name))
                   context = flow.prepare_context(self, args.first)
-                  event.process(context)
-                  context.save_record_if_need
-                  result = context
+                  result = context.process(event)
                   break
                 end
               end

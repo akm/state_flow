@@ -20,7 +20,7 @@ describe StateFlow::State do
           @state = @flow.origin
           @state.name.should == :waiting_settling
 
-          @context = StateFlow::Context.new(@order)
+          @context = @flow.prepare_context(@order)
         end
 
         it "should recieve guard process" do
@@ -97,7 +97,7 @@ describe StateFlow::State do
           @state = @flow.origin
           @state.name.should == :waiting_settling
 
-          @context = StateFlow::Context.new(@order)
+          @context = @flow.prepare_context(@order)
         end
 
         describe ":reserve_stock_ok" do

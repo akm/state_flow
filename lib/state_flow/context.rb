@@ -2,14 +2,23 @@ module StateFlow
 
   class Context
     
-    attr_reader :record, :options
+    attr_reader :flow, :record, :options
     
-    def initialize(record, options = nil)
-      @record = record
+    def initialize(flow, record, options = nil)
+      @flow, @record = flow, record
       @options = {
         :save => :save!,
       }.update(options || {})
     end
+
+    def process(flow_or_named_event = flow)
+      flow.klass.transaction do
+        flow_or_named_event.process(self)
+        save_record_if_need
+      end
+      self
+    end
+
 
     def save_record_if_need
       return unless options[:save]
