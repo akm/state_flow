@@ -60,12 +60,14 @@ module StateFlow
       block.call
     end
     
+    protected
     def ancestors_exception_handled_proc(context, &block)
       result = Proc.new{ exception_handling(context, &block) }
       parent ? parent.ancestors_exception_handled_proc(context, &result) : result
     end
 
 
+    
   end
 
 end

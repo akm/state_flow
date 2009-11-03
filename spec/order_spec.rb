@@ -177,6 +177,100 @@ describe Order do
     end
   end
   
+  describe "from online_settling" do
+    describe "credit_card" do
+      before do
+        @order = Order.new
+        @order.product_name = "Beautiful Code"
+        @order.payment_type = :credit_card
+        @order.status_key = :online_settling
+        @order.save!
+        Order.count.should == 1
+      end
+
+      it "settle succeed" do
+        @order.should_receive(:settle).and_return(:settlement_ok)
+        @order.should_receive(:reserve_stock)
+        @order.should_receive(:send_mail_thanks)
+        @order.process_status_cd(:save! => true)
+        @order.status_key.should == :deliver_preparing
+        Order.count.should == 1
+        Order.count(:conditions => {:status_cd => Order.status_id_by_key(:deliver_preparing)}).should == 1
+      end
+
+      it "settle failed" do
+        @order.should_receive(:settle).and_return(nil)
+        @order.should_receive(:release_stock)
+        @order.should_receive(:delete_point)
+        @order.process_status_cd(:save! => true)
+        @order.status_key.should == :settlement_error
+        Order.count.should == 1
+        Order.count(:conditions => {:status_cd => Order.status_id_by_key(:settlement_error)}).should == 1
+      end
+
+      it "settle failed by IOError" do
+        @order.should_receive(:settle).and_raise(IOError)
+        @order.should_receive(:release_stock)
+        @order.should_receive(:delete_point)
+        @order.process_status_cd(:save! => true)
+        @order.status_key.should == :settlement_error
+        Order.count.should == 1
+        Order.count(:conditions => {:status_cd => Order.status_id_by_key(:settlement_error)}).should == 1
+      end
+    end
+
+    describe "foreign_payment" do
+      before do
+        @order = Order.new
+        @order.product_name = "Beautiful Code"
+        @order.payment_type = :foreign_payment
+        @order.status_key = :online_settling
+        @order.save!
+        Order.count.should == 1
+      end
+
+      it "event must be called as a method" do
+        @order.should_not_receive(:settle)
+        @order.should_not_receive(:reserve_stock)
+        @order.should_not_receive(:send_mail_thanks)
+        @order.process_status_cd(:save! => true)
+        @order.status_key.should == :online_settling
+        Order.count.should == 1
+        Order.count(:conditions => {:status_cd => Order.status_id_by_key(:online_settling)}).should == 1
+      end
+
+      it "event must be called as a method" do
+        @order.should_not_receive(:settle)
+        @order.should_not_receive(:reserve_stock)
+        @order.should_not_receive(:send_mail_thanks)
+        @order.settlement_ok # イベント実行
+        @order.status_key.should == :deliver_preparing
+        Order.count.should == 1
+        Order.count(:conditions => {:status_cd => Order.status_id_by_key(:deliver_preparing)}).should == 1
+      end
+
+      it "settle failed" do
+        @order.should_receive(:release_stock)
+        @order.should_receive(:delete_point)
+        @order.should_receive(:send_mail_invalid_purchage)
+        @order.settlement_ng # イベント実行
+        @order.status_key.should == :settlement_error
+        Order.count.should == 1
+        Order.count(:conditions => {:status_cd => Order.status_id_by_key(:settlement_error)}).should == 1
+      end
+
+      it "settle failed by IOError" do
+        @order.should_receive(:settlement_ok).and_raise(IOError)
+        @order.should_receive(:release_stock)
+        @order.should_receive(:delete_point)
+        @order.settlement_ok # イベント実行
+        @order.status_key.should == :settlement_error
+        Order.count.should == 1
+        Order.count(:conditions => {:status_cd => Order.status_id_by_key(:settlement_error)}).should == 1
+      end
+    end
+  end
+
   describe "structure" do
     it "states" do
       flow = Order.state_flow_for(:status_cd)
@@ -222,6 +316,8 @@ describe Order do
       g0.action.method_name.should == :reserve_point
       g0.action.action.method_name.should == :reserve_stock
       g0.action.action.events.length.should == 2
+      g0.action.action.events[0].should be_a(StateFlow::ActionEvent)
+      g0.action.action.events[1].should be_a(StateFlow::ActionEvent)
       g0.action.action.events[0].destination.should == :deliver_preparing
       g0.action.action.events[1].action.method_name.should == :delete_point
       g0.action.action.events[1].action.destination.should == :stock_error
@@ -231,6 +327,8 @@ describe Order do
       a1 = g1.action.action
       a1.method_name.should == :reserve_stock
       a1.method_args.should == [:temporary => true]
+      a1.events[0].should be_a(StateFlow::ActionEvent)
+      a1.events[1].should be_a(StateFlow::ActionEvent)
       a1.events[0].matcher.should == :reserve_stock_ok
       g00 = a1.events[0].guards[0]
       g00.name.should == :bank_deposit?
@@ -244,7 +342,7 @@ describe Order do
       g02.action.method_name.should == :settle
       g02.action.destination.should ==:online_settling
       e1 = a1.events[1]
-      e1.class.should == StateFlow::Event
+      e1.should be_a(StateFlow::ActionEvent)
       e1.guards[0].action.method_name.should == :delete_point
       e1.guards[0].action.action.method_name.should == :send_mail_stock_shortage
       e1.destination.should == :stock_error

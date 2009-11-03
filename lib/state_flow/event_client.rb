@@ -24,7 +24,10 @@ module StateFlow
     end
 
     def event_else(&block)
-      result = Event.new(self, &block) 
+      if origin.is_a?(State)
+        raise ArgumentError, "event_else can't be after/in a state but an action"
+      end
+      result = ActionEvent.new(self, ActionEvent::ELSE, &block)
       events << result
       result
     end
@@ -45,12 +48,7 @@ module StateFlow
     end
 
     def event_for_action_result(result)
-      events.select do |event|
-        event.is_a?(ActionEvent) || (event.class == Event)
-      end
-      events.detect do |ev|
-        ev.respond_to?(:matcher) ? (ev.matcher === result) : true
-      end
+      events.detect{|ev| ev.match?(result)}
     end
 
     def exception_handling(context)

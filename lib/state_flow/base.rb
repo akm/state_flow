@@ -20,19 +20,20 @@ module StateFlow
         @state_flows << flow
         module_eval(<<-EOS, __FILE__, __LINE__)
           def process_#{selectable_attr}(context_or_options = nil)
-            if context_or_options.is_a?(StateFlow::Context)
-              context = context_or_options
-            else
-              context = StateFlow::Context.new(self, context_or_options)
-            end
-            self.class.state_flow_for(:#{selectable_attr}).process(context)
+            context = context_or_options.is_a?(StateFlow::Context) ?
+              context_or_options :
+              StateFlow::Context.new(self, context_or_options)
+            flow = self.class.state_flow_for(:#{selectable_attr})
+            # context = flow.prepare_context(self, context_or_options)
+            flow.process(context)
             context.save_record_if_need
             context 
           end
         EOS
+        NamedEvent.build_event_methods(flow)
         flow
       end
-
+          
       def process_state(selectable_attr, *keys, &block)
         options = {
           :transactional => false, # :each, # :all
@@ -109,6 +110,12 @@ module StateFlow
       else
         @origin ||= all_states[@origin_name]
       end
+    end
+
+    def prepare_context(record, context_or_options = nil)
+      context_or_options.is_a?(StateFlow::Context) ?
+        context_or_options :
+        StateFlow::Context.new(record, context_or_options)
     end
 
     def process(context)

@@ -23,6 +23,19 @@ module StateFlow
       context.record_send("#{flow.attr_key_name}=", destination)
     end
 
+    # Visitorパターン
+    def visit(&block)
+      results = block.call(self)
+      (results || [:events, :guards, :action]).each do |entries_name|
+        next if [:events, :guards, :action].include?(entries_name) && !respond_to?(entries_name)
+        entries = send(entries_name)
+        entries = [entries] unless entries.is_a?(Array)
+        entries.each do |entry|
+          entry.visit(&block)
+        end
+      end
+    end
+    
   end
 
 end
