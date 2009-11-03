@@ -2,12 +2,11 @@ module StateFlow
   autoload :Base, 'state_flow/base'
   autoload :Context, 'state_flow/context'
 
+  autoload :State, 'state_flow/state'
+  
   autoload :Entry, 'state_flow/entry'
   autoload :EntryVisitable, 'state_flow/entry_visitable'
 
-  autoload :State, 'state_flow/state'
-  autoload :Transition, 'state_flow/transition'
-  
   autoload :Action, 'state_flow/action'
   autoload :ActionClient, 'state_flow/action_client'
 
