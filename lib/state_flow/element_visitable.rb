@@ -6,11 +6,11 @@ module StateFlow
     # Visitorパターン
     def visit(&block)
       results = block.call(self)
-      (results || [:events, :guards, :action]).each do |entries_name|
-        next if [:events, :guards, :action].include?(entries_name) && !respond_to?(entries_name)
-        entries = send(entries_name)
-        entries = [entries] unless entries.is_a?(Array)
-        entries.each do |element|
+      (results || [:events, :guards, :action]).each do |elements_name|
+        next if [:events, :guards, :action].include?(elements_name) && !respond_to?(elements_name)
+        elements = send(elements_name)
+        elements = [elements] unless elements.is_a?(Array)
+        elements.each do |element|
           element.visit(&block) if element
         end
       end
