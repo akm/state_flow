@@ -52,12 +52,19 @@ module StateFlow
 
     public
     def process(context)
-      exception_handling(context) do
+      block = ancestors_exception_handled_proc(context) do
         guard = guard_for(context)
         return guard.process(context) if guard
         return action.process(context) if action
       end
+      block.call
     end
+    
+    def ancestors_exception_handled_proc(context, &block)
+      result = Proc.new{ exception_handling(context, &block) }
+      parent ? parent.ancestors_exception_handled_proc(context, &result) : result
+    end
+
 
   end
 

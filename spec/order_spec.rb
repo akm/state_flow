@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 require File.join(File.dirname(__FILE__), 'spec_helper')
 
+require 'net/http'
+
 describe Order do
   before(:each) do
     StateFlow::Log.delete_all
@@ -34,6 +36,30 @@ describe Order do
         @order.status_key.should == :stock_error
         Order.count.should == 1
         Order.count(:conditions => {:status_cd => Order.status_id_by_key(:waiting_settling)}).should == 1
+      end
+
+      it "reserve_stock failed by Net::ProtoServerError" do
+        @order.should_receive(:reserve_point)
+        @order.should_receive(:reserve_stock).once.and_raise(Net::ProtoServerError)
+        @order.process_status_cd(:save! => true)
+        @order.status_key.should == :external_error
+        # saveされてます。
+        Order.count.should == 1
+        Order.count(:conditions => {:status_cd => Order.status_id_by_key(:waiting_settling)}).should == 0
+        Order.count(:conditions => {:status_cd => Order.status_id_by_key(:external_error)}).should == 1
+        StateFlow::Log.count.should == 0
+      end
+
+      it "reserve_stock failed by IOError" do
+        @order.should_receive(:reserve_point)
+        @order.should_receive(:reserve_stock).once.and_raise(IOError)
+        @order.process_status_cd(:save! => true)
+        @order.status_key.should == :internal_error
+        # saveされてます。
+        Order.count.should == 1
+        Order.count(:conditions => {:status_cd => Order.status_id_by_key(:waiting_settling)}).should == 0
+        Order.count(:conditions => {:status_cd => Order.status_id_by_key(:internal_error)}).should == 1
+        StateFlow::Log.count.should == 0
       end
     end
 
@@ -73,13 +99,11 @@ describe Order do
       end
 
       it "StockShortageError raised" do
-        ActiveRecord::Base.logger.debug("*" * 100)
         @order.product_name = "Refactoring"
         @order.should_receive(:reserve_point)
         @order.should_receive(:reserve_stock).with(:temporary => true).once.and_raise(Order::StockShortageError)
         Order.transaction do
-          context = @order.process_status_cd(:save! => true)
-          ActiveRecord::Base.logger.debug(context.inspect)
+          @order.process_status_cd(:save! => true)
         end
         @order.status_key.should == :stock_error
         Order.count.should == 1

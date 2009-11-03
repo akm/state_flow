@@ -16,6 +16,7 @@ module StateFlow
     end
     
     def match?(exception)
+      prepare_exceptions
       exceptions.any?{|klass| exception.is_a?(klass)}
     end
 
@@ -26,6 +27,14 @@ module StateFlow
       super
     end
 
+    private
+    def prepare_exceptions
+      return if exceptions.all?{|ex| ex.is_a?(Class)}
+      @exceptions = exceptions.map do |ex|
+        ex.is_a?(Class) ? ex : ex.to_s.constantize
+      end
+    end
+    
   end
 
 end
