@@ -7,6 +7,7 @@ module StateFlow
     include ActionClient
     
     def process(context)
+      context.trace(self)
       if guard = guard_for(context)
         guard.process(context)
       else
@@ -14,7 +15,6 @@ module StateFlow
       end
       update_to_destination(context)
     end
-    
   end
 
 end

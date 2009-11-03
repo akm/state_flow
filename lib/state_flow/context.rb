@@ -8,6 +8,7 @@ module StateFlow
       @flow, @record = flow, record
       @options = {
         :save => :save!,
+        :keep_process => true
       }.update(options || {})
     end
 
@@ -16,7 +17,30 @@ module StateFlow
         flow_or_named_event.process(self)
         save_record_if_need
       end
+      if options[:keep_process]
+        last_current_key = current_attr_key
+        while true
+          @mark_proceeding = false
+          flow.process(self)
+          save_record_if_need if @mark_proceeding
+          break unless @mark_proceeding
+          break if last_current_key == current_attr_key
+          last_current_key = current_attr_key
+        end
+      end
       self
+    end
+
+    def mark_proceeding
+      @mark_proceeding = true
+    end
+
+    def trace(object)
+      stack_trace << object
+    end
+
+    def stack_trace
+      @stack_trace ||= []
     end
 
 
@@ -47,6 +71,10 @@ module StateFlow
 
     def recovered?(exception)
       recovered_exceptions.include?(exception)
+    end
+
+    def current_attr_key
+      record_send(flow.attr_key_name)
     end
 
   end

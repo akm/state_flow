@@ -34,7 +34,6 @@ module StateFlow
         ex.is_a?(Class) ? ex : ex.to_s.constantize
       end
     end
-    
   end
 
 end

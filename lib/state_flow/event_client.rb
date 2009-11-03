@@ -69,6 +69,7 @@ module StateFlow
         yield
       rescue Exception => exception
         context.exceptions << exception
+        context.trace(exception)
         handlers = events.select{|ev| ev.is_a?(ExceptionHandler)}
         handlers.each do |handler|
           next unless handler.match?(exception)

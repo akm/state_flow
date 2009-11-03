@@ -14,6 +14,8 @@ module StateFlow
     end
     
     def process(context)
+      context.trace(self)
+      context.mark_proceeding
       exception_handling(context) do
         result = context.record_send(method_name, *method_args)
         event = event_for_action_result(result)
@@ -25,6 +27,7 @@ module StateFlow
         update_to_destination(context)
       end
     end
+
   end
 
 end

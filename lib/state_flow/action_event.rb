@@ -15,6 +15,7 @@ module StateFlow
       return true if matcher == ActionEvent::ELSE
       matcher === action_result
     end
+
   end
 
 end

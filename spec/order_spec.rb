@@ -73,10 +73,10 @@ describe Order do
         Order.count.should == 1
       end
 
-      it "reserve_stock succeed" do
+      it "reserve_stock succeed step by step" do
         @order.should_receive(:reserve_point)
         @order.should_receive(:reserve_stock).with(:temporary => true).once.and_return(:reserve_stock_ok)
-        @order.process_status_cd(:save => false)
+        @order.process_status_cd(:save => false, :keep_process => false)
         @order.status_key.should == :online_settling
         # saveされてません。
         Order.count.should == 1
@@ -84,6 +84,18 @@ describe Order do
         @order.save!
         Order.count.should == 1
         Order.count(:conditions => {:status_cd => Order.status_id_by_key(:online_settling)}).should == 1
+      end
+
+      it "reserve_stock succeed keep_process" do
+        @order.should_receive(:reserve_point)
+        @order.should_receive(:reserve_stock).with(:temporary => true).once.and_return(:reserve_stock_ok)
+        @order.should_receive(:reserve_stock).once.and_return(:reserve_stock_ok)
+        @order.should_receive(:settle).once.and_return(:ok)
+        @order.process_status_cd(:keep_process => true)
+        @order.status_key.should == :deliver_preparing
+        # saveされてます。
+        Order.count.should == 1
+        Order.count(:conditions => {:status_cd => Order.status_id_by_key(:deliver_preparing)}).should == 1
       end
 
       it "reserve_stock fails" do

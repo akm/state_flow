@@ -58,6 +58,7 @@ module StateFlow
 
     public
     def process(context)
+      context.trace(self)
       block = ancestors_exception_handled_proc(context) do
         guard = guard_for(context)
         return guard.process(context) if guard
@@ -72,7 +73,22 @@ module StateFlow
       parent ? parent.ancestors_exception_handled_proc(context, &result) : result
     end
 
-    
+    public
+
+    def name_path(separator = '>')
+      result = []
+      current = self
+      while current
+        result << current.name
+        current = current.parent
+      end
+      result.reverse.join(separator)
+    end
+
+    def inspect
+      "#<%s:%#x @name=%s>" % [self.class.name, self.object_id, name_path.inspect]
+    end
+
     
   end
 
