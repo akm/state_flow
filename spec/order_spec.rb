@@ -174,7 +174,8 @@ describe Order do
       g0.action.action.method_name.should == :reserve_stock
       g0.action.action.events.length.should == 2
       g0.action.action.events[0].destination.should == :deliver_preparing
-      g0.action.action.events[1].destination.should == :stock_error
+      g0.action.action.events[1].action.method_name.should == :delete_point
+      g0.action.action.events[1].action.destination.should == :stock_error
       g1 = state.guards[1]
       g1.class.should == StateFlow::Guard
       g1.action.method_name.should == :reserve_point
@@ -195,7 +196,8 @@ describe Order do
       g02.action.destination.should ==:online_settling
       e1 = a1.events[1]
       e1.class.should == StateFlow::Event
-      e1.guards[0].action.method_name.should == :send_mail_stock_shortage
+      e1.guards[0].action.method_name.should == :delete_point
+      e1.guards[0].action.action.method_name.should == :send_mail_stock_shortage
       e1.destination.should == :stock_error
     end
   end
