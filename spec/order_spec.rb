@@ -98,6 +98,18 @@ describe Order do
         Order.count(:conditions => {:status_cd => Order.status_id_by_key(:deliver_preparing)}).should == 1
       end
 
+      it "reserve_stock succeed keep_process but failed" do
+        @order.should_receive(:reserve_point)
+        @order.should_receive(:reserve_stock).with(:temporary => true).once.and_return(:reserve_stock_ok)
+        @order.should_receive(:reserve_stock).once.and_raise(IOError)
+        @order.should_receive(:settle).once.and_return(:ok)
+        @order.process_status_cd(:keep_process => true)
+        @order.status_key.should == :settlement_error # 決済時の例外はすべて:settlement_errorにします。
+        # saveされてます。
+        Order.count.should == 1
+        Order.count(:conditions => {:status_cd => Order.status_id_by_key(:settlement_error)}).should == 1
+      end
+
       it "reserve_stock fails" do
         @order.should_receive(:reserve_point)
         @order.should_receive(:reserve_stock).with(:temporary => true).once.and_return(nil)
