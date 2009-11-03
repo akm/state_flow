@@ -69,12 +69,7 @@ class Order < ActiveRecord::Base
           }
           guard(:foreign_payment?){
             event(:settlement_ok).to(:deliver_preparing)
-            event(:settlement_ng){
-              action(:release_stock)
-              action(:delete_point)
-              action(:send_mail_invalid_purchage)
-              to(:settlement_error)
-            }
+            event(:settlement_ng).action(:release_stock).action(:delete_point).action(:send_mail_invalid_purchage).to(:settlement_error)
           }
           recover(Exception).action(:release_stock).action(:delete_point).to(:settlement_error)
         end

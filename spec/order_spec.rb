@@ -243,7 +243,7 @@ describe Order do
         @order.should_not_receive(:settle)
         @order.should_not_receive(:reserve_stock)
         @order.should_not_receive(:send_mail_thanks)
-        @order.settlement_ok # イベント実行
+        @order.settlement_ok(:save! => true) # イベント実行
         @order.status_key.should == :deliver_preparing
         Order.count.should == 1
         Order.count(:conditions => {:status_cd => Order.status_id_by_key(:deliver_preparing)}).should == 1
@@ -253,17 +253,7 @@ describe Order do
         @order.should_receive(:release_stock)
         @order.should_receive(:delete_point)
         @order.should_receive(:send_mail_invalid_purchage)
-        @order.settlement_ng # イベント実行
-        @order.status_key.should == :settlement_error
-        Order.count.should == 1
-        Order.count(:conditions => {:status_cd => Order.status_id_by_key(:settlement_error)}).should == 1
-      end
-
-      it "settle failed by IOError" do
-        @order.should_receive(:settlement_ok).and_raise(IOError)
-        @order.should_receive(:release_stock)
-        @order.should_receive(:delete_point)
-        @order.settlement_ok # イベント実行
+        @order.settlement_ng(:save! => true) # イベント実行
         @order.status_key.should == :settlement_error
         Order.count.should == 1
         Order.count(:conditions => {:status_cd => Order.status_id_by_key(:settlement_error)}).should == 1
@@ -346,6 +336,35 @@ describe Order do
       e1.guards[0].action.method_name.should == :delete_point
       e1.guards[0].action.action.method_name.should == :send_mail_stock_shortage
       e1.destination.should == :stock_error
+    end
+
+    it ":online_settling" do
+      flow = Order.state_flow_for(:status_cd)
+      state = flow.concrete_states[:online_settling]
+      g0 = state.guards[0]
+      g0.name.should == :credit_card?
+      g0.action.method_name.should == :settle
+      e0 = g0.action.events[0]
+      e0.should be_a(StateFlow::ActionEvent)
+      e0.action.method_name.should == :reserve_stock
+      e0.action.action.method_name.should == :send_mail_thanks
+      e0.action.action.destination.should == :deliver_preparing
+      e1 = g0.action.events[1]
+      e1.should be_a(StateFlow::ActionEvent)
+      e1.action.method_name.should == :release_stock
+      e1.action.action.method_name.should == :delete_point
+      e1.action.action.destination.should == :settlement_error
+      g1 = state.guards[1]
+      g1.name.should == :foreign_payment?
+      e2 = g1.events[0]
+      e2.should be_a(StateFlow::NamedEvent)
+      e2.destination.should == :deliver_preparing
+      e3 = g1.events[1]
+      e3.should be_a(StateFlow::NamedEvent)
+      e3.action.method_name.should == :release_stock
+      e3.action.action.method_name.should == :delete_point
+      e3.action.action.action.method_name.should == :send_mail_invalid_purchage
+      e3.action.action.action.destination.should == :settlement_error
     end
   end
 

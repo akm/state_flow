@@ -20,14 +20,11 @@ module StateFlow
         @state_flows << flow
         module_eval(<<-EOS, __FILE__, __LINE__)
           def process_#{selectable_attr}(context_or_options = nil)
-            context = context_or_options.is_a?(StateFlow::Context) ?
-              context_or_options :
-              StateFlow::Context.new(self, context_or_options)
             flow = self.class.state_flow_for(:#{selectable_attr})
-            # context = flow.prepare_context(self, context_or_options)
+            context = flow.prepare_context(self, context_or_options)
             flow.process(context)
             context.save_record_if_need
-            context 
+            context
           end
         EOS
         NamedEvent.build_event_methods(flow)
@@ -124,6 +121,7 @@ module StateFlow
       klass.transaction do
         state.process(context)
       end
+      context
     end
 
     def process_with_log(record, success_key, failure_key)

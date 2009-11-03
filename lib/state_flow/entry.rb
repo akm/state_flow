@@ -3,6 +3,8 @@ require 'state_flow'
 module StateFlow
 
   class Entry
+    include EntryVisitable
+
     attr_reader :origin
     attr_reader :destination
     def initialize(origin, &block)
@@ -18,23 +20,15 @@ module StateFlow
       @flow || origin.flow
     end
 
+    def state
+      origin.is_a?(State) ? origin : origin.state
+    end
+
     def update_to_destination(context)
       return unless destination
       context.record_send("#{flow.attr_key_name}=", destination)
     end
 
-    # Visitorパターン
-    def visit(&block)
-      results = block.call(self)
-      (results || [:events, :guards, :action]).each do |entries_name|
-        next if [:events, :guards, :action].include?(entries_name) && !respond_to?(entries_name)
-        entries = send(entries_name)
-        entries = [entries] unless entries.is_a?(Array)
-        entries.each do |entry|
-          entry.visit(&block)
-        end
-      end
-    end
     
   end
 

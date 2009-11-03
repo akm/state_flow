@@ -16,11 +16,24 @@ module StateFlow
           raise ArgumentError, "event(event_name) or event(action_result) or event(Exception1, Exception2...)"
         end
         name_or_matcher = name_or_matcher_or_exceptions.first
-        klass = origin.is_a?(State) ? NamedEvent : ActionEvent
-        result = klass.new(self, name_or_matcher, &block)
-        events << result
-        result
+        if origin.is_a?(State)
+          named_event(name_or_matcher, &block)
+        else
+          action_event(name_or_matcher, &block)
+        end
       end
+    end
+
+    def named_event(name, &block)
+      result = NamedEvent.new(self, name, &block)
+      events << result
+      result
+    end
+
+    def action_event(matcher, &block)
+      result = ActionEvent.new(self, matcher, &block)
+      events << result
+      result
     end
 
     def event_else(&block)

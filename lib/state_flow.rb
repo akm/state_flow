@@ -3,6 +3,7 @@ module StateFlow
   autoload :Context, 'state_flow/context'
 
   autoload :Entry, 'state_flow/entry'
+  autoload :EntryVisitable, 'state_flow/entry_visitable'
 
   autoload :State, 'state_flow/state'
   autoload :Transition, 'state_flow/transition'

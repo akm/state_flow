@@ -6,6 +6,7 @@ module StateFlow
     include EventClient
     include GuardClient
     include ActionClient
+    include EntryVisitable
 
     attr_reader :name, :flow, :parent
     attr_accessor :termination
@@ -40,6 +41,11 @@ module StateFlow
       [self, children.map{|c|c.descendants}].flatten
     end
 
+    def include?(state_or_name)
+      name = state_or_name.is_a?(State) ? state_or_name.name : state_or_name
+      descendants.any?{|state| state.name == name}
+    end
+
     def concrete?
       @concreate
     end
@@ -66,7 +72,7 @@ module StateFlow
       parent ? parent.ancestors_exception_handled_proc(context, &result) : result
     end
 
-
+    
     
   end
 

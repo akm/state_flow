@@ -9,17 +9,16 @@ module StateFlow
       super(origin, &block)
     end
 
+
     class << self
       def build_event_methods(flow)
-        dispatcher = [:events]
         named_events = []
         flow.all_states.each do |state_name, state|
-          state.events.each do |event|
+          state.visit do |event|
             named_events << event if event.is_a?(NamedEvent)
-            dispatcher
+            [:events, :guards, :action]
           end
         end
-        puts named_events.map(&:name)
         method_name_to_events = {}
         named_events.each do |ev|
           method_name_to_events[ev.name] ||= []
@@ -27,10 +26,21 @@ module StateFlow
         end
         method_name_to_events.each do |name, events|
           flow.klass.module_eval do
+            # イベントを通知するときに呼び出されるメソッド
             define_method(name) do |*args|
-              
-              
+              result = nil
+              events.each do |event|
+                if event.state.include?(self.send(flow.attr_key_name))
+                  context = flow.prepare_context(self, args.first)
+                  event.process(context)
+                  context.save_record_if_need
+                  result = context
+                  break
+                end
+              end
+              result # return
             end
+
           end
         end
       end
