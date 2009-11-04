@@ -3,37 +3,75 @@
 
 状態遷移のためのDSLを提供するためのActiveRecordを拡張するプラグインです。
 
+基本的にUMLのステートチャート図に忠実に状態遷移を記述できるようにすることが最終目標です。
+現在のところ、以下のような機能があります。
+ * イベント／ガード／アクションの設定
+  * イベントとして定義可能なのは、以下の通りです。
+   * モデルに対する任意の名前のアクション(メソッドとして定義されるので、メソッド名に被っていると上書きされます)。
+   * アクションの戻り値
+   * 例外
+  * ガードはその条件に該当するかどうかを判断するメソッド名を指定します。
+  * アクションはモデルのメソッドを指定しますが、状態を変更するコードは不要です。
+  * 状態の遷移は自動で行われます。
+ * 状態のネスト
+  * 親の状態で定義されたイベントが実行された場合に正しく状態を遷移します。
+ * 状態を遷移する際のトランザクションの制御
+  * 各状態間の遷移毎にトランザクションを発行します。
+  * 例外発生時などにはロールバックを行い、(指定されていれば)例外に対応する状態に遷移してモデルを保存します。
+
+=== サンプル
 以下のような記述が可能です。
 
- class Page < ActiveRecord::Base
-   validates_presence_of :name
+ class Order < ActiveRecord::Base
+
+   class StockShortageError < StandardError
+   end
 
    selectable_attr :status_cd do
-     entry '01', :editable       , '編集可'
-     entry '04', :waiting_publish, '公開待ち'
-     entry '05', :publishing     , '公開処理中'
-     entry '06', :publishing_done, '公開処理完了'
-     entry '07', :published      , '公開済'
-     entry '08', :publish_failure, '公開失敗'
+     entry '00', :waiting_settling , '決済前'
+     entry '01', :online_settling  , '決済中'
+     entry '02', :receiving        , '入金待ち'
+     entry '03', :deliver_preparing, '配送準備中'
    end
 
    state_flow(:status_cd) do
-     state :created => {event(:publish) => :waiting_publish, :lock => true}
+     origin(:waiting_settling)
 
-     with_options(:failure => :publish_failure) do |publishing|
-       publishing.state :waiting_publish => :publishing, :lock => true
-       publishing.state :publishing => {action(:start_publish) => :publishing_done}
-       publishing.state :publishing_done => :published, :if => :accessable?
-       publishing.state :publish_failure
+     group(:valid) do 
+       from(:waiting_settling) do
+         guard(:pay_cash_on_delivery?).action(:reserve_point).action(:reserve_stock){
+           event(:reserve_stock_ok).to(:deliver_preparing)
+           event_else.action(:delete_point).to(:stock_error)
+         }
+         guard_else.action(:reserve_point).action(:reserve_stock, :temporary => true){
+           event(:reserve_stock_ok){
+             guard(:bank_deposit?).action(:send_mail_thanks).to(:receiving)
+             guard(:credit_card?).to(:online_settling)
+             guard(:foreign_payment?).action(:settle).to(:online_settling)
+           }
+           event_else{
+             guard(:foreign_payment?).action(:delete_point).action(:send_mail_stock_shortage)
+           }.to(:stock_error)
+         }
+         recover(StockShortageError).to(:stock_error)
+       end
+
+       from(:online_settling) do
+         guard(:credit_card?).action(:settle){
+           event(:ok).action(:reserve_stock).action(:send_mail_thanks).to(:deliver_preparing)
+           event_else.action(:release_stock).action(:delete_point).to(:settlement_error)
+         }
+         guard(:foreign_payment?){
+           event(:settlement_ok).to(:deliver_preparing)
+           event(:settlement_ng).action(:release_stock).action(:delete_point).action(:send_mail_invalid_purchage).to(:settlement_error)
+         }
+         recover(Exception).action(:release_stock).action(:delete_point).to(:settlement_error)
+       end
      end
-
-     state :published
-   end
-
-   def start_publish
-     # 公開時の処理
    end
  end
+
+詳しくはspec/order_spec.rbをご覧ください。
 
 == セットアップ
 state_flowプラグインはselectable_attrに依存しています。
@@ -78,8 +116,8 @@ config/initializers/state_flow.rb
 
 == Example
 以下のテスト用のモデルや、テストをご覧ください。
-http://github.com/akm/state_flow/blob/master/spec/resources/models/page.rb
-http://github.com/akm/state_flow/blob/master/spec/page_spec.rb
+http://github.com/akm/state_flow/blob/master/spec/resources/models/order.rb
+http://github.com/akm/state_flow/blob/master/spec/order_spec.rb
 
 
 Copyright (c) 2009 [Takeshi AKIMA], released under the MIT license
