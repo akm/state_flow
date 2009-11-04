@@ -97,7 +97,9 @@ module StateFlow
 
     def process(context)
       current_key = context.current_attr_key
+      raise ArgumentError, "current_key not found for: #{context.inspect}" unless current_key
       state = concrete_states[current_key]
+      raise ArgumentError, "status not found for: #{current_key.inspect}" unless state
       state.process(context)
       context
     end
