@@ -61,6 +61,26 @@ describe Order do
         Order.count(:conditions => {:status_cd => Order.status_id_by_key(:internal_error)}).should == 1
         StateFlow::Log.count.should == 0
       end
+
+      it "cancel_request" do
+        @order.should_receive(:send_mail_cancel_requested)
+        @order.cancel_request
+        @order.status_key.should == :cancel_requested
+        # saveされてます。
+        Order.count.should == 1
+        Order.count(:conditions => {:status_cd => Order.status_id_by_key(:cancel_requested)}).should == 1
+        StateFlow::Log.count.should == 0
+      end
+
+      it "cancel_request but raised error" do
+        @order.should_receive(:send_mail_cancel_requested).and_raise(IOError)
+        @order.cancel_request
+        @order.status_key.should == :internal_error
+        # saveされてます。
+        Order.count.should == 1
+        Order.count(:conditions => {:status_cd => Order.status_id_by_key(:internal_error)}).should == 1
+        StateFlow::Log.count.should == 0
+      end
     end
 
     describe "credit_card" do

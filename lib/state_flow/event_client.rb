@@ -3,6 +3,8 @@ require 'state_flow'
 module StateFlow
 
   module EventClient
+    include ExceptionHandlerClient
+    
     def events
       @events ||= []
     end

@@ -67,13 +67,10 @@ module StateFlow
       block.call
     end
     
-    protected
     def ancestors_exception_handled_proc(context, &block)
       result = Proc.new{ exception_handling(context, &block) }
       parent ? parent.ancestors_exception_handled_proc(context, &result) : result
     end
-
-    public
 
     def name_path(separator = '>')
       result = []
@@ -88,7 +85,6 @@ module StateFlow
     def inspect
       "#<%s:%#x @name=%s>" % [self.class.name, self.object_id, name_path.inspect]
     end
-
     
   end
 

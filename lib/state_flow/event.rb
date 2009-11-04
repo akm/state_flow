@@ -5,6 +5,7 @@ module StateFlow
   class Event < Element
     include GuardClient
     include ActionClient
+    include ExceptionHandlerClient
     
     def process(context)
       context.trace(self)
