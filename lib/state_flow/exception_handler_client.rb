@@ -9,15 +9,9 @@ module StateFlow
       events.select{|ev| ev.is_a?(ExceptionHandler)}
     end
 
-    def exception_handling(context)
+    def exception_handling(context, &block)
       if context.force_recovering?
-        begin
-          return yield
-        rescue Exception => exception
-          context.log_with_stack_trace(:warn, "IGNORE EXCEPTION IN RECOVERING", 
-            :exception => exception, :backtrace => true)
-          return retry_in_recovering(context) if respond_to?(:retry_in_recovering)
-        end
+        return context.with_force_recovering(self, :retry_in_recovering, context, &block)
       end
 
       handlers = exception_handlers

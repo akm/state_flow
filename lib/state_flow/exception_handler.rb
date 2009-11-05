@@ -25,7 +25,7 @@ module StateFlow
     def process(context)
       context.recovered_exceptions << context.exceptions.last if recovering
       context.record_reload_if_possible # rollbackよりもreloadが先じゃないとネストしたtransactionでおかしい場合がある？
-      context.transaction_rollback if rolling_back
+      # context.transaction_rollback if rolling_back
       super
     end
 

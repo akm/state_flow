@@ -86,8 +86,17 @@ describe Order do
         @order.should_receive(:send_mail_cancel_requested).and_raise(IOError)
         @order.should_receive(:send_mail_error).and_raise(IOError)
         context = @order.cancel_request(:keep_process => false)
+        @order.status_key.should == :internal_error
+        # saveされてます。
+        Order.count.should == 1
+        Order.count(:conditions => {:status_cd => Order.status_id_by_key(:internal_error)}).should == 1
+        StateFlow::Log.count.should == 0
+      end
 
-
+      it "cancel_request but raised error and another error during recovering #2" do
+        @order.should_receive(:send_mail_cancel_requested).and_raise(IOError)
+        @order.should_receive(:write_exception_to_log).and_raise(IOError)
+        context = @order.cancel_request(:keep_process => false)
         @order.status_key.should == :internal_error
         # saveされてます。
         Order.count.should == 1
@@ -282,7 +291,8 @@ describe Order do
         context.stack_trace[ 3].method_name.should == :settle
         context.stack_trace[ 4].inspect.should == "Order#settle"
         context.stack_trace[ 5].should be_a(TestRuntimeError1)
-        context.stack_trace[ 6].inspect.should == "#{Order.connection.class.name}#rollback_db_transaction"
+        context.stack_trace[ 6].inspect.should == "Order#reload"
+        # context.stack_trace[ 6].inspect.should == "#{Order.connection.class.name}#rollback_db_transaction"
         context.stack_trace[ 7].should be_a(StateFlow::ExceptionHandler)
         context.stack_trace[ 7].exceptions.should == [Exception]
         context.stack_trace[ 8].should be_a(StateFlow::Action)

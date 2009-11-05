@@ -19,10 +19,9 @@ module StateFlow
       exception_handling(context) do
         result = context.record_send(method_name, *method_args)
         event = event_for_action_result(result)
-        if event
-          event.process(context)
-        elsif action
-          action.process(context)
+        event.process(context) if event
+        unless event
+          action.process(context) if action
         end
         update_to_destination(context)
       end

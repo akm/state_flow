@@ -80,6 +80,22 @@ module StateFlow
     def finish_force_recovering; @force_recovering = false; end
     def force_recovering?; @force_recovering; end
 
+    def with_force_recovering(target = nil, *recovering_method_and_args)
+      return yield unless force_recovering?
+      begin
+        return yield
+      rescue Exception => exception
+        log_with_stack_trace(:warn, "IGNORE EXCEPTION IN RECOVERING", 
+            :exception => exception, :backtrace => true)
+        if recovering_method_and_args.empty?
+          return
+        else
+          return target.send(*recovering_method_and_args)
+        end
+      end
+    end
+
+
     def log_with_stack_trace(level, *messages)
       options = messages.extract_options!
       exception = options.delete(:exception)
@@ -99,15 +115,22 @@ module StateFlow
       ActiveRecord::Base.logger.send(level, result)
     end
 
-    class RecordManipulation
-      attr_reader :target, :method, :args, :block, :trace, :result
-      def initialize(target, method, *args, &block)
+    class Manipulation
+      attr_reader :target, :method, :args, :block
+      attr_reader :trace, :result
+      attr_reader :context
+      def initialize(context, target, method, *args, &block)
+        @context = context
         @target, @method, @args, @block = target, method, args, block
         @trace = caller(3)
       end
 
       def execute
-        @result = @target.send(@method, *@args, &@block)
+        begin
+          return @result = @target.send(@method, *@args, &@block)
+        rescue Exception
+          raise unless @context.force_recovering?
+        end
       end
 
       def inspect
@@ -121,27 +144,28 @@ module StateFlow
 
     def save_record_if_need
       return unless options[:save]
-      manipulation = RecordManipulation.new(record, options[:save])
+      manipulation = Manipulation.new(self, record, options[:save])
       trace(manipulation)
       manipulation.execute
     end
 
     def record_send(*args, &block)
-      manipulation = RecordManipulation.new(record, *args, &block)
+      manipulation = Manipulation.new(self, record, *args, &block)
       trace(manipulation)
       manipulation.execute
     end
 
-
-
     def record_reload_if_possible
-      record.reload unless record.new_record?
+      return if record.new_record?
+      manipulation = Manipulation.new(self, record, :reload)
+      trace(manipulation)
+      manipulation.execute 
     end
 
     def transaction_rollback
-      manipulation = RecordManipulation.new(record.class.connection, :rollback_db_transaction)
+      manipulation = Manipulation.new(self, record.class.connection, :rollback_db_transaction)
       trace(manipulation)
-      record.class.connection.rollback_db_transaction
+      manipulation.execute
     end
     
     def exceptions
