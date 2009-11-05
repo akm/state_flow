@@ -28,6 +28,7 @@ module StateFlow
   
   def self.included(mod)
     mod.module_eval do
+      include(Base::ClientInstanceMethods)
       extend(Base::ClientClassMethods)
     end
   end

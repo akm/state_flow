@@ -103,6 +103,22 @@ describe Order do
         Order.count(:conditions => {:status_cd => Order.status_id_by_key(:internal_error)}).should == 1
         StateFlow::Log.count.should == 0
       end
+
+      it "can access runtime error message in action method" do
+        expected_msg = "実行時に取得しにくいエラー"
+        @order.should_receive(:send_mail_cancel_requested).and_raise(IOError.new(expected_msg))
+        context = @order.cancel_request(:keep_process => false)
+        
+        # context.stack_trace.should == []
+
+        @order.status_key.should == :internal_error
+        @order.instance_variable_get(:@last_error_message).should == expected_msg
+        
+        # saveされてます。
+        Order.count.should == 1
+        Order.count(:conditions => {:status_cd => Order.status_id_by_key(:internal_error)}).should == 1
+        StateFlow::Log.count.should == 0
+      end
     end
 
     describe "credit_card" do

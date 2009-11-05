@@ -37,6 +37,7 @@ module StateFlow
               events.each do |event|
                 if event.state.include?(self.send(flow.attr_key_name))
                   context = flow.prepare_context(self, args.first)
+                  self.state_flow_contexts[flow.attr_name] = context
                   result = context.process(event)
                   break
                 end

@@ -168,6 +168,20 @@ class Order < ActiveRecord::Base
   def send_mail_settlement_error; end
 
   def send_mail_error; end
-  def write_exception_to_log; end
+  
+  # recover(:'Exception') で処理した例外を実行時に参照します。
+  def write_exception_to_log
+    logger.debug "*" * 100
+    logger.debug "write_exception_to_log"
+    
+    logger.debug state_flow_contexts.inspect
+
+    if context = state_flow_contexts[:status_cd]
+      logger.debug context.inspect
+      logger.debug context.exceptions.inspect
+      @last_error_message = context.exceptions.last.to_s
+    end
+
+  end
 
 end

@@ -4,6 +4,13 @@ module StateFlow
 
   class Base
     
+    module ClientInstanceMethods
+      def state_flow_contexts
+        @state_flow_contexts ||= {}
+      end
+    end
+
+
     module ClientClassMethods
       def state_flow_for(selectable_attr)
         return nil unless @state_flows
@@ -20,8 +27,9 @@ module StateFlow
         @state_flows << flow
         module_eval(<<-EOS, __FILE__, __LINE__)
           def process_#{selectable_attr}(context_or_options = nil)
-            flow = self.class.state_flow_for(:#{selectable_attr})
+            flow = self.class.state_flow_for(:#{flow.attr_name})
             context = flow.prepare_context(self, context_or_options)
+            state_flow_contexts[:#{selectable_attr}] = context
             context.process(flow)
           end
         EOS
