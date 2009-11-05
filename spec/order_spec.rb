@@ -86,6 +86,8 @@ describe Order do
         @order.should_receive(:send_mail_cancel_requested).and_raise(IOError)
         @order.should_receive(:send_mail_error).and_raise(IOError)
         context = @order.cancel_request(:keep_process => false)
+
+
         @order.status_key.should == :internal_error
         # saveされてます。
         Order.count.should == 1

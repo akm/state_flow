@@ -30,6 +30,11 @@ module StateFlow
       context.record_send("#{flow.attr_key_name}=", destination)
     end
 
+    def retry_in_recovering(context)
+      update_to_destination(context)
+    end
+
+
     class << self
       def uninspected_var(*vars)
         @@uninspected_var_hash ||= {}

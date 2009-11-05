@@ -13,7 +13,7 @@ module StateFlow
     end
 
     def process(flow_or_named_event = flow)
-      flow.klass.transaction do
+      transaction_with_recovering do
         flow_or_named_event.process(self)
         save_record_if_need
       end
@@ -21,8 +21,10 @@ module StateFlow
         last_current_key = current_attr_key
         while true
           @mark_proceeding = false
-          flow.process(self)
-          save_record_if_need if @mark_proceeding
+          transaction_with_recovering do
+            flow.process(self)
+            save_record_if_need if @mark_proceeding
+          end
           break unless @mark_proceeding
           break if last_current_key == current_attr_key
           last_current_key = current_attr_key
@@ -30,7 +32,33 @@ module StateFlow
       end
       self
     end
+    
+    private
+    def transaction_with_recovering(&block)
+      begin
+        flow.klass.transaction(&block)
+      rescue ::StateFlow::RecoverableException => exception
+        handler = exception.recover_handler
+        log_with_stack_trace(:info, "RECOVERING START", :backtrace => true, :exception => exception, :recover_handler => handler)
+        start_force_recovering
+        begin
+          transaction_with_recovering do
+            handler.process(self)
+            save_record_if_need
+          end
+          log_with_stack_trace(:info, "RECOVERED", :backtrace => false, :exception => exception, :recover_handler => handler)
+        rescue Exception => exception
+          exceptions << exception
+          trace(exception)
+          log_with_stack_trace(:warn, "RECOVERING FAILURE!!!!!", :backtrace => true, :exception => exception, :recover_handler => handler)
+          raise
+        end
+      end
+    end
+    
 
+    public
+    
     def mark_proceeding
       @mark_proceeding = true
     end
