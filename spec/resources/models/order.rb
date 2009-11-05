@@ -27,7 +27,7 @@ class Order < ActiveRecord::Base
       # recoverの順番は重要。Exceptionを先に書くと全ての例外は:internal_errorになってしまいます。
       recover(:'Net::HTTPHeaderSyntaxError').to(:external_error)
       recover(:'Net::ProtocolError').to(:external_error)
-      recover(:'Exception').to(:internal_error)
+      recover(:'Exception').action(:send_mail_error).to(:internal_error)
 
       group(:auto_cancelable) do # 自動キャンセル可
         
@@ -126,7 +126,6 @@ class Order < ActiveRecord::Base
     
     group(:error) do # 異常系
       from(:settlement_error) do
-        action(:send_mail_settlement_error)
         # to(:settlement_error) # 遷移しない
       end
       
@@ -167,5 +166,7 @@ class Order < ActiveRecord::Base
   def send_mail_shipping_for_customer; end
   def send_mail_deliver_notification; end
   def send_mail_settlement_error; end
+
+  def send_mail_error; end
 
 end

@@ -41,8 +41,8 @@ module StateFlow
         @uninspected_vars ||= @@uninspected_var_hash.nil? ? %w(@flow @origin) :
           self.ancestors.map{|klass| @@uninspected_var_hash[klass] || []}.flatten
       end
-   end
-   self.uninspected_var :flow, :origin, :events, :guards, :action
+    end
+    self.uninspected_var :flow, :origin, :events, :guards, :action
  
     def inspect
       vars = (instance_variables - self.class.uninspected_vars).map do |name|
@@ -52,8 +52,6 @@ module StateFlow
       vars.unshift("%s:%#x" % [self.class.name, self.object_id])
       "#<#{vars.join(' ')}>"
     end
-
-
     
   end
 

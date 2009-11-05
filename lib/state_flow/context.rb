@@ -36,6 +36,7 @@ module StateFlow
     end
 
     def trace(object)
+      ActiveRecord::Base.logger.debug(object.inspect)
       stack_trace << object
     end
 
@@ -43,21 +44,75 @@ module StateFlow
       @stack_trace ||= []
     end
 
+    def stack_trace_inspects
+      stack_trace.map{|st| st.inspect}
+    end
+
+    def start_force_recovering ; @force_recovering = true ; end
+    def finish_force_recovering; @force_recovering = false; end
+    def force_recovering?; @force_recovering; end
+
+    def log_with_stack_trace(level, *messages)
+      options = messages.extract_options!
+      exception = options.delete(:exception)
+      backtrace = options.delete(:backtrace)
+      result = "#{messages.shift}"
+      result << "\n  exception: #{exception.inspect}" if exception
+      messages.each do |msg|
+        result << "\n  #{msg}"
+      end
+      options.each do |key, value|
+        result << "\n  #{key.inspect}: #{value.inspect}"
+      end
+      if exception && backtrace
+        result << "\n  exception.backtrace:\n    " << exception.backtrace.join("\n    ")
+      end
+      result << "\n  context.stack_trace:\n    " << stack_trace_inspects.reverse.join("\n    ")
+      ActiveRecord::Base.logger.send(level, result)
+    end
+
+    class RecordManipulation
+      attr_reader :target, :method, :args, :block, :trace, :result
+      def initialize(target, method, *args, &block)
+        @target, @method, @args, @block = target, method, args, block
+        @trace = caller(3)
+      end
+
+      def execute
+        @result = @target.send(@method, *@args, &@block)
+      end
+
+      def inspect
+        args_part = @args.inspect.gsub(/^\[|\]$/, '')
+        if !args_part.nil? && !args_part.empty?
+          args_part = "(#{args_part})"
+        end
+        "#{@target.class.name}##{@method}#{args_part}#{@block ? " with block" : nil}"
+      end
+    end
 
     def save_record_if_need
       return unless options[:save]
-      record.send(options[:save])
+      manipulation = RecordManipulation.new(record, options[:save])
+      trace(manipulation)
+      manipulation.execute
     end
 
     def record_send(*args, &block)
-      record.send(*args, &block)
+      manipulation = RecordManipulation.new(record, *args, &block)
+      trace(manipulation)
+      manipulation.execute
     end
+
+
 
     def record_reload_if_possible
       record.reload unless record.new_record?
     end
 
     def transaction_rollback
+      manipulation = RecordManipulation.new(record.class.connection, :rollback_db_transaction)
+      trace(manipulation)
       record.class.connection.rollback_db_transaction
     end
     

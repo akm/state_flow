@@ -81,6 +81,17 @@ describe Order do
         Order.count(:conditions => {:status_cd => Order.status_id_by_key(:internal_error)}).should == 1
         StateFlow::Log.count.should == 0
       end
+
+      it "cancel_request but raised error and another error during recovering" do
+        @order.should_receive(:send_mail_cancel_requested).and_raise(IOError)
+        @order.should_receive(:send_mail_error).and_raise(IOError)
+        context = @order.cancel_request(:keep_process => false)
+        @order.status_key.should == :internal_error
+        # saveされてます。
+        Order.count.should == 1
+        Order.count(:conditions => {:status_cd => Order.status_id_by_key(:internal_error)}).should == 1
+        StateFlow::Log.count.should == 0
+      end
     end
 
     describe "credit_card" do
@@ -252,11 +263,40 @@ describe Order do
         Order.count(:conditions => {:status_cd => Order.status_id_by_key(:settlement_error)}).should == 1
       end
 
-      it "settle failed by IOError" do
-        @order.should_receive(:settle).and_raise(IOError)
+      class TestRuntimeError1 < RuntimeError
+      end
+
+      it "settle failed by RuntimeError" do
+        @order.should_receive(:settle).and_raise(TestRuntimeError1)
         @order.should_receive(:release_stock)
         @order.should_receive(:delete_point)
-        @order.process_status_cd
+        context = @order.process_status_cd
+        # context.stack_trace.should == []
+        context.stack_trace[ 0].inspect.should == "Order#status_key"
+        context.stack_trace[ 1].should be_a(StateFlow::State)
+        context.stack_trace[ 1].name_path.should == "valid>auto_cancelable>online_settling"
+        context.stack_trace[ 2].inspect.should == "Order#credit_card?" 
+        context.stack_trace[ 3].should be_a(StateFlow::Action)
+        context.stack_trace[ 3].method_name.should == :settle
+        context.stack_trace[ 4].inspect.should == "Order#settle"
+        context.stack_trace[ 5].should be_a(TestRuntimeError1)
+        context.stack_trace[ 6].inspect.should == "#{Order.connection.class.name}#rollback_db_transaction"
+        context.stack_trace[ 7].should be_a(StateFlow::ExceptionHandler)
+        context.stack_trace[ 7].exceptions.should == [Exception]
+        context.stack_trace[ 8].should be_a(StateFlow::Action)
+        context.stack_trace[ 8].method_name.should == :release_stock
+        context.stack_trace[ 9].inspect.should == "Order#release_stock"
+        context.stack_trace[10].should be_a(StateFlow::Action)
+        context.stack_trace[10].method_name.should == :delete_point
+        context.stack_trace[11].inspect.should == "Order#delete_point"
+        context.stack_trace[12].inspect.should == "Order#status_key=(:settlement_error)"
+        context.stack_trace[13].inspect.should == "Order#save!"
+        context.stack_trace[14].inspect.should == "Order#status_key"
+        context.stack_trace[15].inspect.should == "Order#status_key"
+        context.stack_trace[16].should be_a(StateFlow::State)
+        context.stack_trace[16].name_path.should == "error>settlement_error"
+        context.stack_trace.length.should == 17
+
         @order.status_key.should == :settlement_error
         Order.count.should == 1
         Order.count(:conditions => {:status_cd => Order.status_id_by_key(:settlement_error)}).should == 1

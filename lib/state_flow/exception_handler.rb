@@ -4,7 +4,7 @@ module StateFlow
 
   class ExceptionHandler < Event
     attr_reader :exceptions
-    attr_reader :recovering, :rolling_back, :logging_error
+    attr_reader :recovering, :rolling_back, :logging_error, :raise_error_in_handling
     
     def initialize(origin, *exceptions, &block)
       options = exceptions.extract_options!
@@ -13,6 +13,8 @@ module StateFlow
       @recovering = options[:recovering] || false
       @rolling_back = options[:rolling_back] || options[:rollback] || false
       @logging_error = options[:logging]
+      # 例外をハンドリングしている最中にエラーが出た場合にraiseするかどうか。デフォルトnil
+      @raise_error_in_handling = options[:raise_error_in_handling] 
     end
     
     def match?(exception)

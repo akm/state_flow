@@ -8,14 +8,25 @@ module StateFlow
     end
 
     def exception_handling(context)
+      if context.force_recovering?
+        begin
+          return yield
+        rescue Exception => err
+          context.log_with_stack_trace(:warn, "IGNORED ERROR by force_recovering", 
+            :exception => err, :backtrace => true)
+          # ignore exception
+          update_to_destination(context)
+          return
+        end
+      end
+      
       handlers = exception_handlers
       return yield if handlers.empty?
       ActiveRecord::Base.logger.debug("---- exception_handling BEGIN by #{self.inspect}")
       begin
-        yield
+        return yield
         ActiveRecord::Base.logger.debug("---- exception_handling END by #{self.inspect}")
       rescue Exception => exception
-        ActiveRecord::Base.logger.debug("---- #{self.inspect} handliing exception: #{exception.inspect}")
         context.exceptions << exception
         context.trace(exception)
         recover_handler = nil
@@ -23,24 +34,31 @@ module StateFlow
           next unless handler.match?(exception)
           recover_handler = handler
           begin
+            unless handler.raise_error_in_handling
+              context.start_force_recovering
+              context.log_with_stack_trace(:warn, "FORCE RECOVERING START",
+                :exception => err, :backtrace => true, 
+                :recover_handler => recover_handler)
+            end
             handler.process(context)
           rescue Exception => err
-            ActiveRecord::Base.logger.debug("RECOVERING FAILURE!!!!! #{err.inspect} by #{handler.inspect}\n  " <<
-              context.stack_trace.join("\n  ") << "\n  " <<
-              err.backtrace.join("\n  "))
+            context.exceptions << err
+            context.trace(err)
+            context.log_with_stack_trace(:warn, "RECOVERING FAILURE!!!!!", 
+              :exception => err, :backtrace => true, 
+              :recover_handler => recover_handler)
             raise err
           end
           break
         end
         if context.recovered?(exception)
-          ActiveRecord::Base.logger.debug("RECOVERED ----- #{exception.inspect} by #{recover_handler.inspect} for #{recover_handler.exceptions.inspect}")
+          context.log_with_stack_trace(:info, "RECOVERED", 
+            :exception => exception, :backtrace => false, 
+            :recover_handler => recover_handler)
         else
-          ActiveRecord::Base.logger.debug(
-            "NOT RECOVERED - #{exception.inspect}\n  " <<
-            (recover_handler ? "tried by #{recover_handler.inspect}\n  " : "" ) <<
-            "exception_handlers: #{handlers.inspect}\n  " <<
-            context.stack_trace.map{|st| st.inspect}.join("\n  ") << "\n  " <<
-            exception.backtrace.join("\n  "))
+          context.log_with_stack_trace(:error, "NOT RECOVERED", 
+            :exception => exception, :backtrace => true, 
+            :exception_handlers => handlers, :recover_handler => recover_handler)
           raise exception
         end
       end
