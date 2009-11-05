@@ -59,17 +59,18 @@ module StateFlow
     public
     def process(context)
       context.trace(self)
-      block = ancestors_exception_handled_proc(context) do
+      exception_handling(context) do
         guard = guard_for(context)
         return guard.process(context) if guard
         return action.process(context) if action
       end
-      block.call
     end
     
-    def ancestors_exception_handled_proc(context, &block)
-      result = Proc.new{ exception_handling(context, &block) }
-      parent ? parent.ancestors_exception_handled_proc(context, &result) : result
+    # override ExceptionHandlerClient#exception_handlers
+    def exception_handlers
+      result = events.select{|ev| ev.is_a?(ExceptionHandler)}
+      result.concat(parent.exception_handlers) if parent
+      result
     end
 
     def name_path(separator = '>')

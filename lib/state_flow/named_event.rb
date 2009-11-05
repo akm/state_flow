@@ -10,10 +10,9 @@ module StateFlow
     end
 
     def process(context)
-      block = state.ancestors_exception_handled_proc(context) do
+      state.exception_handling(context) do
         super
       end
-      block.call
     end
 
     class << self
